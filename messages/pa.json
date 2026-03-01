@@ -1,0 +1,21 @@
+{
+  "Common": {
+    "appName": "SmartAgri",
+    "language": "Language",
+    "settings": "Settings",
+    "dashboard": "Dashboard",
+    "scanLeaf": "Scan Leaf",
+    "weather": "Weather",
+    "market": "Market",
+    "soil": "Soil",
+    "schemes": "Schemes",
+    "history": "History",
+    "logout": "Logout"
+  },
+  "Settings": {
+    "title": "Settings",
+    "languageTitle": "Language",
+    "languageHint": "Select language to apply everywhere in the app.",
+    "current": "Current language"
+  }
+}
