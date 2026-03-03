@@ -1,9 +1,9 @@
 "use client";
 
+import { isLoggedIn } from "@/lib/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { isLoggedIn } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,17 +32,14 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         alert(data?.error || "Login failed");
         return;
       }
 
-      // ✅ Save session for MVP
       localStorage.setItem("smartAgriName", data.name);
       localStorage.setItem("smartAgriAuth", "true");
       localStorage.setItem("smartAgriUserId", data.userId);
-
       router.push("/dashboard");
     } catch (err: any) {
       alert(err?.message || "Something went wrong");
@@ -50,152 +47,143 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#070A12] text-white">
-      {/* Futuristic Background */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-emerald-500/20 blur-[120px]" />
-        <div className="absolute top-24 -left-40 h-[520px] w-[520px] rounded-full bg-cyan-500/20 blur-[120px]" />
-        <div className="absolute bottom-0 right-0 h-[520px] w-[520px] rounded-full bg-fuchsia-500/10 blur-[140px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] [background-size:28px_28px] opacity-35" />
+    <main className="relative min-h-screen overflow-hidden bg-[#05070d] text-white">
+      {/* Backdrop: base + aurora + texture + vignette */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_92%_42%,rgba(16,185,129,0.22),transparent_60%),radial-gradient(900px_600px_at_84%_56%,rgba(45,212,191,0.2),transparent_58%),linear-gradient(180deg,#05070d_0%,#04060b_100%)]" />
+        <div className="absolute inset-0 opacity-[0.28] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.16)_1px,transparent_0)] [background-size:24px_24px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_50%,transparent_45%,rgba(0,0,0,0.56)_100%)]" />
+        <div className="absolute inset-0 opacity-[0.12] mix-blend-soft-light [background-image:radial-gradient(rgba(255,255,255,0.45)_0.55px,transparent_0.55px)] [background-size:3px_3px]" />
       </div>
 
-      {/* Top bar */}
-      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-6">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.85)]" />
-          </span>
-          <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-wide">SmartAgri MVP</div>
-            <div className="text-xs text-white/60">Login</div>
-          </div>
-        </Link>
-
-        <Link
-          href="/"
-          className="rounded-xl bg-white/5 px-4 py-2 text-sm text-white/80 ring-1 ring-white/10 hover:bg-white/10"
-        >
-          Back
-        </Link>
-      </header>
-
-      {/* Content */}
-      <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-5 pb-14 pt-6 md:grid-cols-2">
-        {/* Left */}
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs text-white/70 ring-1 ring-white/10">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
-            Secure Access • Dashboard Ready
-          </div>
-
-          <h1 className="mt-4 text-4xl font-semibold leading-tight md:text-5xl">
-            Welcome back to{" "}
-            <span className="bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
-              SmartAgri
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 pb-12 pt-7">
+        <header className="flex items-center justify-between">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.95)]" />
             </span>
-          </h1>
+            <span className="leading-tight">
+              <span className="block text-sm font-semibold tracking-wide text-white">SmartAgri MVP</span>
+              <span className="block text-xs text-white/60">Login</span>
+            </span>
+          </Link>
 
-          <p className="mt-4 max-w-lg text-sm text-white/70">
-            Login to view weather insights, soil moisture readings, scan history and
-            irrigation schedule — designed for fast demo flow.
-          </p>
+          <Link
+            href="/"
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 backdrop-blur-md hover:bg-white/10"
+          >
+            Back
+          </Link>
+        </header>
 
-          <div className="mt-7 grid max-w-lg grid-cols-2 gap-3">
-            <MiniCard title="Weather" sub="Forecast + alerts" />
-            <MiniCard title="Irrigation" sub="Plan + tips" />
-            <MiniCard title="Scan Leaf" sub="AI vision UI" />
-            <MiniCard title="History" sub="Search & filters" />
-          </div>
-        </div>
-
-        {/* Right */}
-        <div className="relative">
-          <div className="rounded-3xl bg-white/5 p-6 ring-1 ring-white/10 backdrop-blur-xl">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">Login</h2>
-                <p className="mt-1 text-sm text-white/60">
-                  Login using MongoDB stored account.
-                </p>
-              </div>
-              <span className="relative mt-1 inline-flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/35" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.7)]" />
-              </span>
+        <section className="mx-auto mt-10 grid w-full max-w-6xl items-center gap-10 md:grid-cols-[1.05fr_0.95fr]">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/8 px-3 py-1 text-xs font-medium text-emerald-100/90 backdrop-blur-md">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+              Secure Access • Dashboard Ready
             </div>
 
-            <form onSubmit={onSubmit} className="mt-6 space-y-4">
-              <Field label="Email">
-                <input
-                  className="mt-1 w-full rounded-2xl bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/35 ring-1 ring-white/10 outline-none transition focus:ring-2 focus:ring-emerald-400/40"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                />
-              </Field>
+            <h1 className="mt-5 text-4xl font-bold leading-tight md:text-6xl">
+              <span className="block text-white">Welcome back to</span>
+              <span className="block bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 bg-clip-text text-transparent">
+                SmartAgri
+              </span>
+            </h1>
 
-              <Field label="Password">
-                <div className="relative mt-1">
-                  <input
-                    type={show ? "text" : "password"}
-                    className="w-full rounded-2xl bg-white/5 px-4 py-3 pr-14 text-sm text-white placeholder:text-white/35 ring-1 ring-white/10 outline-none transition focus:ring-2 focus:ring-emerald-400/40"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShow((s) => !s)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-white/5 px-3 py-2 text-xs text-white/70 ring-1 ring-white/10 hover:bg-white/10"
-                  >
-                    {show ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </Field>
-
-              <button className="group relative w-full overflow-hidden rounded-2xl bg-emerald-500 px-4 py-3 font-semibold text-black shadow-[0_0_26px_rgba(16,185,129,0.35)] hover:bg-emerald-400">
-                <span className="relative z-10">Login</span>
-                <span className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
-                  <span className="absolute -left-24 top-0 h-full w-24 rotate-12 bg-white/35 blur-xl" />
-                </span>
-              </button>
-            </form>
-
-            <p className="mt-5 text-sm text-white/70">
-              New user?{" "}
-              <Link href="/auth/register" className="font-semibold text-emerald-200 hover:text-emerald-100">
-                Register
-              </Link>
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-300 md:text-base">
+              Login to view weather insights, soil moisture readings, scan history and irrigation schedule, designed
+              for fast demo flow.
             </p>
 
-            <div className="mt-4 rounded-2xl bg-white/5 px-4 py-3 text-xs text-white/60 ring-1 ring-white/10">
-              Make sure your MongoDB connection string is correct in <b>.env.local</b>.
+            <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FeatureCard title="Weather" sub="Forecast + alerts" />
+              <FeatureCard title="Irrigation" sub="Plan + tips" />
+              <FeatureCard title="Scan Leaf" sub="AI vision UI" />
+              <FeatureCard title="History" sub="Search & filters" />
             </div>
           </div>
 
-          <div className="pointer-events-none absolute -inset-6 rounded-[32px] bg-gradient-to-r from-emerald-500/20 via-cyan-500/10 to-fuchsia-500/10 blur-2xl" />
-        </div>
-      </section>
+          <div className="relative">
+            <div className="absolute -inset-6 rounded-[32px] bg-[radial-gradient(circle_at_60%_20%,rgba(52,211,153,0.25),transparent_48%),radial-gradient(circle_at_30%_70%,rgba(45,212,191,0.22),transparent_52%)] blur-2xl" />
+
+            <div className="relative rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_24px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Login</h2>
+                  <p className="mt-1 text-sm text-slate-300">Access your SmartAgri dashboard securely.</p>
+                </div>
+                <span className="inline-flex h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
+              </div>
+
+              <form onSubmit={onSubmit} className="mt-6 space-y-4">
+                <Field label="Email">
+                  <input
+                    className="mt-1 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-slate-400 outline-none backdrop-blur-md transition focus:border-emerald-300/40 focus:ring-2 focus:ring-emerald-300/25"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                  />
+                </Field>
+
+                <Field label="Password">
+                  <div className="relative mt-1">
+                    <input
+                      type={show ? "text" : "password"}
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 pr-16 text-sm text-white placeholder:text-slate-400 outline-none backdrop-blur-md transition focus:border-emerald-300/40 focus:ring-2 focus:ring-emerald-300/25"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShow((s) => !s)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-white/10"
+                    >
+                      {show ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </Field>
+
+                <button
+                  type="submit"
+                  className="w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-3 font-semibold text-slate-950 shadow-[0_0_30px_rgba(45,212,191,0.28)] transition duration-300 hover:scale-[1.01] hover:from-emerald-300 hover:to-teal-300"
+                >
+                  Login
+                </button>
+              </form>
+
+              <p className="mt-5 text-sm text-slate-300">
+                New user?{" "}
+                <Link href="/auth/register" className="font-semibold text-emerald-300 transition hover:text-emerald-200">
+                  Register
+                </Link>
+              </p>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
+                Ensure your environment variables are configured in <b>.env.local</b>.
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
 
-/* ---------- UI helpers (UI only) ---------- */
-
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-xs font-semibold text-white/70">{label}</label>
+      <label className="text-xs font-semibold tracking-wide text-slate-300">{label}</label>
       {children}
     </div>
   );
 }
 
-function MiniCard({ title, sub }: { title: string; sub: string }) {
+function FeatureCard({ title, sub }: { title: string; sub: string }) {
   return (
-    <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
-      <div className="text-sm font-semibold">{title}</div>
-      <div className="mt-1 text-xs text-white/60">{sub}</div>
+    <div className="group cursor-pointer rounded-2xl border border-white/10 bg-[rgba(255,255,255,0.05)] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur-md transition duration-300 hover:scale-[1.03] hover:border-emerald-300/35 hover:shadow-[0_0_30px_rgba(45,212,191,0.16)]">
+      <p className="text-sm font-semibold text-white">{title}</p>
+      <p className="mt-1 text-xs text-slate-300">{sub}</p>
     </div>
   );
 }

@@ -17,6 +17,9 @@ const AlertSchema = new Schema(
     notifyEmailSent: { type: Boolean, default: false },
     notifyEmailSentAt: { type: Date, default: null },
     notifyEmailError: { type: String, default: "" },
+    notifySmsSent: { type: Boolean, default: false },
+    notifySmsSentAt: { type: Date, default: null },
+    notifySmsError: { type: String, default: "" },
   },
   { timestamps: true }
 );

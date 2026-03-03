@@ -1,0 +1,33 @@
+{
+  "voiceLanguages": [
+    { "code": "en-IN", "label": "English", "nativeLabel": "English" },
+    { "code": "hi-IN", "label": "Hindi", "nativeLabel": "हिन्दी" },
+    { "code": "bn-IN", "label": "Bengali", "nativeLabel": "বাংলা" },
+    { "code": "ta-IN", "label": "Tamil", "nativeLabel": "தமிழ்" },
+    { "code": "te-IN", "label": "Telugu", "nativeLabel": "తెలుగు" },
+    { "code": "gu-IN", "label": "Gujarati", "nativeLabel": "ગુજરાતી" },
+    { "code": "kn-IN", "label": "Kannada", "nativeLabel": "ಕನ್ನಡ" },
+    { "code": "ml-IN", "label": "Malayalam", "nativeLabel": "മലയാളം" },
+    { "code": "mr-IN", "label": "Marathi", "nativeLabel": "मराठी" },
+    { "code": "pa-IN", "label": "Punjabi", "nativeLabel": "ਪੰਜਾਬੀ" },
+    { "code": "od-IN", "label": "Odia", "nativeLabel": "ଓଡ଼ିଆ" }
+  ],
+  "siteSections": [
+    { "title": "Dashboard", "path": "dashboard", "purpose": "Farm summary, alerts, and quick decisions.", "keywords": ["dashboard", "summary", "overview", "alerts"] },
+    { "title": "Weather", "path": "weather", "purpose": "Forecast, rainfall, temperature, and humidity for planning.", "keywords": ["weather", "forecast", "rain", "temperature", "humidity", "wind"] },
+    { "title": "Irrigation", "path": "irrigation", "purpose": "Water planning and irrigation scheduling support.", "keywords": ["irrigation", "watering", "drip", "sprinkler", "moisture"] },
+    { "title": "Soil", "path": "soil", "purpose": "Soil condition and nutrient guidance.", "keywords": ["soil", "ph", "npk", "fertility", "nutrient"] },
+    { "title": "Scan", "path": "scan", "purpose": "Leaf disease scan from crop images.", "keywords": ["scan", "leaf", "disease", "spot", "fungus", "pest"] },
+    { "title": "Scans", "path": "scans", "purpose": "Past scan history and issue tracking.", "keywords": ["history", "previous", "old scan"] },
+    { "title": "Farm AI", "path": "farm-ai", "purpose": "Stepwise farm planning and actions.", "keywords": ["farm ai", "farm plan", "planning", "season"] },
+    { "title": "Marketplace", "path": "marketplace", "purpose": "Sell produce and connect with buyers.", "keywords": ["market", "sell", "buyer", "price", "produce"] },
+    { "title": "Waste Management", "path": "waste-management", "purpose": "Sell agri-waste and byproducts.", "keywords": ["waste", "straw", "residue", "stubble", "recycle"] },
+    { "title": "Schemes", "path": "schemes", "purpose": "Government benefits and scheme support.", "keywords": ["scheme", "benefit", "subsidy", "pm kisan"] },
+    { "title": "Alerts", "path": "alerts", "purpose": "Critical farm alerts and notifications.", "keywords": ["alert", "warning", "notification"] },
+    { "title": "Profile", "path": "profile", "purpose": "Farmer profile information.", "keywords": ["profile", "account"] },
+    { "title": "Settings", "path": "settings", "purpose": "Language and app preferences.", "keywords": ["settings", "language", "preferences"] },
+    { "title": "Contact", "path": "contact", "purpose": "Reach support team.", "keywords": ["contact", "support", "help"] },
+    { "title": "With AI", "path": "with-ai", "purpose": "AI tools hub inside SmartAgri.", "keywords": ["with ai", "ai tools", "assistant"] }
+  ],
+  "foundationParagraph": "SmartAgri Voice Assistant helps farmers make practical decisions from sowing to harvest while also guiding navigation inside this website. Start with crop planning by choosing climate-suitable seeds, verifying soil type, and setting a weekly task schedule for land preparation, irrigation, nutrient management, pest scouting, and harvest readiness. Before sowing, check weather patterns, rainfall windows, and local temperature shifts so field operations are not delayed by sudden rain or heat stress. During early crop growth, monitor leaf color, stem strength, and soil moisture daily; yellowing, curling, spots, stunting, or wilting should trigger quick diagnosis using visual checks and our Scan page. Use balanced fertilization based on soil condition instead of guesswork, apply organic matter like compost for structure and water retention, and split nutrient doses to reduce losses. For irrigation, avoid overwatering, prefer morning or evening cycles, and align watering with forecast to prevent runoff and disease pressure. If humidity remains high or rain is frequent, watch for fungal spread, improve spacing and airflow, and avoid spraying when strong wind or rain is expected. For pest and disease control, remove heavily affected parts, maintain tool hygiene, rotate methods, and follow safe label instructions with protective gear. Post-harvest, grade produce carefully, record quantity and quality, and compare local demand before fixing selling price. Use Marketplace to list crops with clear details such as variety, harvest date, moisture level, and pickup terms so buyers can respond faster. Use Waste Management to sell straw, residue, and byproducts instead of burning, creating extra income and protecting soil health. On SmartAgri website, Dashboard gives your full overview; Weather shows forecast and alerts; Irrigation helps water planning; Soil supports fertility decisions; Scan detects leaf issues; Scans stores history; Farm AI helps schedule actions; Schemes explains farmer benefits; Alerts tracks critical events; Profile and Settings help account control; Contact connects support; With AI opens advanced tools. When a farmer asks any question, this assistant should respond in a friendly, simple, and encouraging style, provide generalized yet useful agriculture guidance, and then suggest the exact SmartAgri section path for next action so the farmer can reach results quickly with confidence in every season and every field condition across different regions. This guidance also covers nursery care, transplant timing, weed suppression, drainage correction, pollination support, harvest hygiene, and safe storage to reduce post-harvest losses. Farmers should keep simple records of sowing date, seed batch, fertilizer doses, spray intervals, irrigation events, and market rates, because written tracking improves decisions and profitability over time. If uncertain, begin with low-risk corrections, observe field response, and escalate only when symptoms persist. The assistant should remind users to check local advisories, water availability, labor limits, and input cost before any major step. It should prefer affordable options first, explain tradeoffs clearly, and always end with one next action. It should mention relevant SmartAgri paths in words like Weather (/weather), Soil (/soil), Irrigation (/irrigation), Scan (/scan), Farm AI (/farm-ai), Marketplace (/marketplace), and Waste Management (/waste-management) so navigation is immediate and easy."
+}

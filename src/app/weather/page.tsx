@@ -307,13 +307,13 @@ export default function WeatherPage() {
                         key={h.dt}
                         className={[
                           "border-b transition",
-                          isNowRow ? "bg-green-50" : "hover:bg-slate-50",
+                          isNowRow ? "bg-emerald-500/15" : "hover:bg-white/10",
                         ].join(" ")}
                       >
                         <td className="px-4 py-3 text-slate-800">
                           {formatDateTimeUnix(h.dt)}
                           {isNowRow && (
-                            <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+                            <span className="ml-2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-100">
                               NOW
                             </span>
                           )}
@@ -432,7 +432,7 @@ function DayCardLight({
       onClick={onClick}
       className={[
         "min-w-[220px] rounded-xl border p-4 text-left shadow-sm transition",
-        active ? "border-green-200 bg-green-50" : "bg-white hover:bg-slate-50",
+        active ? "border-emerald-300/35 bg-emerald-500/15" : "bg-white hover:bg-white/10",
       ].join(" ")}
     >
       <div className="flex items-start justify-between gap-3">
@@ -479,13 +479,13 @@ function HourlyCardLight({
     <div
       className={[
         "min-w-[160px] rounded-xl border p-4 shadow-sm transition",
-        isNow ? "border-green-200 bg-green-50" : "bg-white hover:bg-slate-50",
+        isNow ? "border-emerald-300/35 bg-emerald-500/15" : "bg-white hover:bg-white/10",
       ].join(" ")}
     >
       <div className="flex items-center justify-between">
         <div className="text-xs text-slate-500">{time}</div>
         {isNow && (
-          <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">
+          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-100">
             NOW
           </span>
         )}

@@ -1,26 +1,474 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg0: #04070f;
+  --bg1: #060b16;
+  --bg2: #081122;
+  --text-0: #eef5ff;
+  --text-1: #c2cfde;
+  --text-2: #93a4b8;
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-strong: rgba(255, 255, 255, 0.09);
+  --line: rgba(255, 255, 255, 0.12);
+  --line-soft: rgba(255, 255, 255, 0.08);
+  --teal: #35d4c0;
+  --green: #33d17a;
+}
+
+html[data-theme="light"] {
+  --bg0: #eef3f9;
+  --bg1: #f7f9fc;
+  --bg2: #ffffff;
+  --text-0: #0f172a;
+  --text-1: #334155;
+  --text-2: #64748b;
+  --glass: rgba(15, 23, 42, 0.04);
+  --glass-strong: rgba(15, 23, 42, 0.08);
+  --line: rgba(15, 23, 42, 0.14);
+  --line-soft: rgba(15, 23, 42, 0.09);
+}
+
+html[data-theme="light"] body {
+  background:
+    radial-gradient(1200px 700px at 88% 20%, rgba(16, 185, 129, 0.1), transparent 62%),
+    radial-gradient(980px 620px at 84% 46%, rgba(14, 165, 233, 0.08), transparent 58%),
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 55%, #eef3f9 100%);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg0);
+  --color-foreground: var(--text-0);
+  --font-sans: var(--font-manrope);
+  --font-mono: var(--font-space-grotesk);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  color: var(--text-0);
+  font-family: var(--font-manrope), sans-serif;
+  background:
+    radial-gradient(1200px 700px at 88% 28%, rgba(51, 209, 122, 0.18), transparent 62%),
+    radial-gradient(980px 620px at 84% 46%, rgba(53, 212, 192, 0.16), transparent 58%),
+    linear-gradient(180deg, var(--bg2) 0%, var(--bg1) 50%, var(--bg0) 100%);
+  transition: background 200ms ease, color 200ms ease;
 }
+
+html[data-sa-translating="true"] .agri-root {
+  opacity: 0.72;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+}
+
+html[data-sa-translating="true"] .agri-root::before {
+  opacity: 0.1;
+}
+
+.agri-root {
+  position: relative;
+}
+
+.agri-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.22;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.23) 1px, transparent 0),
+    radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.12) 1px, transparent 0);
+  background-size: 24px 24px, 13px 13px;
+}
+
+.agri-root::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 45% 45%, transparent 40%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+a,
+button {
+  transition: all 180ms ease;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgba(53, 212, 192, 0.36);
+  outline-offset: 1px;
+}
+
+/* Shared card + panel look */
+.agri-root .rounded-2xl.border.bg-white,
+.agri-root .rounded-xl.border.bg-white,
+.agri-root .rounded-3xl.border.bg-white,
+.agri-root .bg-white {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border-color: var(--line);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.agri-root .shadow-sm {
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Muted surfaces */
+.agri-root .bg-slate-50,
+.agri-root .bg-slate-100 {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.agri-root .hover\:bg-slate-50:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.agri-root .hover\:bg-slate-100:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.agri-root .hover\:bg-red-50:hover {
+  background: rgba(239, 68, 68, 0.14) !important;
+}
+
+.agri-root .border-slate-200,
+.agri-root .border-slate-100 {
+  border-color: var(--line-soft);
+}
+
+/* Typography remap */
+.agri-root .text-slate-900 {
+  color: var(--text-0);
+}
+.agri-root .text-slate-800,
+.agri-root .text-slate-700,
+.agri-root .text-slate-600 {
+  color: var(--text-1);
+}
+.agri-root .text-slate-500 {
+  color: var(--text-2);
+}
+
+/* Inputs */
+.agri-root input,
+.agri-root textarea,
+.agri-root select {
+  color: var(--text-0);
+  border-color: var(--line-soft);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Global dropdown redesign */
+.agri-root select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 14px;
+  min-height: 2.55rem;
+  line-height: 1.2;
+  font-weight: 600;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.045)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%23a8b7cc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+      no-repeat right 0.65rem center / 14px 14px;
+  padding-left: 0.75rem;
+  padding-right: 2.35rem !important;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease;
+  cursor: pointer;
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.agri-root select:hover {
+  border-color: rgba(53, 212, 192, 0.55);
+  background-color: rgba(255, 255, 255, 0.08);
+  transform: translateY(-0.5px);
+}
+
+.agri-root select:focus-visible {
+  border-color: rgba(53, 212, 192, 0.6);
+  box-shadow:
+    0 0 0 2px rgba(53, 212, 192, 0.22),
+    0 14px 28px rgba(0, 0, 0, 0.24);
+  transform: translateY(-1px);
+}
+
+.agri-root select option {
+  background: #0f1728;
+  color: #e6eefb;
+  font-weight: 600;
+}
+
+.agri-root select option:checked {
+  background: #123628;
+  color: #d1fae5;
+}
+
+.agri-root select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.agri-root select::-ms-expand {
+  display: none;
+}
+
+.agri-root input::placeholder,
+.agri-root textarea::placeholder {
+  color: #90a1b8;
+}
+
+/* Tables */
+.agri-root table thead tr,
+.agri-root table tbody tr {
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+/* Buttons */
+.agri-root .bg-green-600 {
+  background: linear-gradient(135deg, #2ecb9c 0%, #1ea975 100%);
+}
+
+.agri-root .hover\:bg-green-700:hover {
+  background: linear-gradient(135deg, #2ad6a2 0%, #1a9d6c 100%);
+}
+
+.agri-root .bg-slate-900 {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.agri-root .hover\:bg-black:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+html[data-theme="light"] .agri-root::before {
+  opacity: 0.08;
+}
+
+html[data-theme="light"] .agri-root::after {
+  background: radial-gradient(circle at 45% 45%, transparent 52%, rgba(148, 163, 184, 0.18) 100%);
+}
+
+html[data-theme="light"] .agri-root .rounded-2xl.border.bg-white,
+html[data-theme="light"] .agri-root .rounded-xl.border.bg-white,
+html[data-theme="light"] .agri-root .rounded-3xl.border.bg-white,
+html[data-theme="light"] .agri-root .bg-white {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.94) 100%);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+html[data-theme="light"] .agri-root .shadow-sm {
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+html[data-theme="light"] .agri-root .bg-white\/5 {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+html[data-theme="light"] .agri-root .border-white\/10 {
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+html[data-theme="light"] .agri-root .text-slate-100,
+html[data-theme="light"] .agri-root .text-slate-200 {
+  color: #0f172a;
+}
+
+html[data-theme="light"] .agri-root .text-slate-300,
+html[data-theme="light"] .agri-root .text-slate-400 {
+  color: #334155;
+}
+
+html[data-theme="light"] .agri-root select {
+  border-color: rgba(100, 116, 139, 0.34);
+  color: #0f172a;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 252, 0.96)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+      no-repeat right 0.65rem center / 14px 14px;
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+html[data-theme="light"] .agri-root select:hover {
+  border-color: rgba(45, 212, 191, 0.56);
+  background-color: rgba(248, 250, 252, 1);
+}
+
+html[data-theme="light"] .agri-root select option {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+html[data-theme="light"] .agri-root select option:checked {
+  background: #d1fae5;
+  color: #064e3b;
+}
+
+/* Dark theme safety: avoid light-green selected cards with light text */
+html:not([data-theme="light"]) .agri-root .bg-green-50 {
+  background: rgba(16, 185, 129, 0.16) !important;
+}
+
+html:not([data-theme="light"]) .agri-root .bg-green-100 {
+  background: rgba(16, 185, 129, 0.24) !important;
+}
+
+html:not([data-theme="light"]) .agri-root .border-green-200 {
+  border-color: rgba(52, 211, 153, 0.38) !important;
+}
+
+html:not([data-theme="light"]) .agri-root .text-green-700 {
+  color: #86efac !important;
+}
+
+/* Hover glow on cards */
+.agri-root .rounded-2xl.border.bg-white:hover,
+.agri-root .rounded-xl.border.bg-white:hover {
+  transform: translateY(-1px);
+  border-color: rgba(53, 212, 192, 0.28);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.46),
+    0 0 0 1px rgba(53, 212, 192, 0.12),
+    0 0 28px rgba(53, 212, 192, 0.09);
+}
+
+@keyframes agriFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.agri-root main,
+.agri-root aside,
+.agri-root header {
+  animation: agriFadeUp 280ms ease both;
+}
+
+.weather-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.weather-panel::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.12), transparent 36%),
+    radial-gradient(circle at 82% 35%, rgba(52, 211, 153, 0.1), transparent 42%),
+    radial-gradient(circle at 55% 82%, rgba(250, 204, 21, 0.08), transparent 45%);
+  animation: weatherFlow 18s linear infinite;
+}
+
+.weather-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.weather-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.weather-card::after {
+  content: "";
+  position: absolute;
+  inset: -60% -20% auto -20%;
+  height: 160%;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), transparent 45%);
+}
+
+.dashboard-atmosphere {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(56, 189, 248, 0.16), transparent 40%),
+    radial-gradient(circle at 80% 22%, rgba(34, 197, 94, 0.15), transparent 42%),
+    radial-gradient(circle at 52% 78%, rgba(251, 191, 36, 0.12), transparent 48%);
+  animation: weatherFlow 22s linear infinite;
+}
+
+.dashboard-atmosphere > * {
+  position: relative;
+  z-index: 1;
+}
+
+.metric-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: "";
+  position: absolute;
+  left: -25%;
+  right: -25%;
+  top: -120%;
+  bottom: 55%;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(52, 211, 153, 0.18), transparent);
+}
+
+@keyframes weatherFlow {
+  0% {
+    transform: translate3d(-2%, -1%, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(2%, 1.5%, 0) rotate(180deg);
+  }
+  100% {
+    transform: translate3d(-2%, -1%, 0) rotate(360deg);
+  }
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+

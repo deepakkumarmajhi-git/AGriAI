@@ -1,9 +1,12 @@
 export const runtime = "nodejs";
 
 import { connectDB } from "@/lib/db";
+import { notifyAlertById } from "@/lib/notifyAlert";
+import { Alert } from "@/models/Alert";
 import { WeatherCache } from "@/models/WeatherCache";
 
 const CACHE_HOURS = 6;
+const WEATHER_ALERT_DEDUPE_HOURS = 12;
 
 type GeoResult = {
   latitude: number;
@@ -19,6 +22,53 @@ function normalizeKey(city: string) {
 
 function hoursBetween(a: Date, b: Date) {
   return Math.abs(a.getTime() - b.getTime()) / (1000 * 60 * 60);
+}
+
+function normalizeUserId(userId: string | null) {
+  if (!userId) return null;
+  const v = userId.trim();
+  if (!/^[a-fA-F0-9]{24}$/.test(v)) return null;
+  return v;
+}
+
+function weatherAlertTitle(type: string) {
+  return `Weather Alert: ${String(type || "GENERAL").replaceAll("_", " ")}`;
+}
+
+async function createWeatherAlertsAndNotify(params: {
+  userId: string | null;
+  locationName: string;
+  alerts: { type: string; level: "info" | "warning" | "critical"; message: string }[];
+}) {
+  const userId = normalizeUserId(params.userId);
+  if (!userId) return;
+  if (!params.alerts?.length) return;
+
+  const since = new Date(Date.now() - WEATHER_ALERT_DEDUPE_HOURS * 60 * 60 * 1000);
+
+  for (const a of params.alerts) {
+    const title = weatherAlertTitle(a.type);
+    const message = `${a.message} (Location: ${params.locationName})`;
+
+    const existing = await Alert.findOne({
+      userId,
+      title,
+      message,
+      createdAt: { $gte: since },
+    }).lean();
+
+    if (existing) continue;
+
+    const saved = await Alert.create({
+      userId,
+      level: a.level,
+      title,
+      message,
+      relatedScanId: null,
+    });
+
+    await notifyAlertById(saved._id.toString());
+  }
 }
 
 function buildExtremeAlerts(data: any) {
@@ -59,6 +109,7 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const city = searchParams.get("city");
+  const userId = searchParams.get("userId");
 
   if (!city) return Response.json({ error: "Missing city" }, { status: 400 });
 
@@ -69,11 +120,22 @@ export async function GET(req: Request) {
   if (cached) {
     const ageHrs = hoursBetween(new Date(), new Date((cached as any).fetchedAt));
     if (ageHrs <= CACHE_HOURS) {
+      const cachedPayload = (cached as any).payload || {};
+      try {
+        await createWeatherAlertsAndNotify({
+          userId,
+          locationName: cachedPayload.locationName || city,
+          alerts: cachedPayload.alerts || [],
+        });
+      } catch {
+        // non-blocking
+      }
+
       return Response.json({
         ok: true,
         source: "cache",
         cachedAt: (cached as any).fetchedAt,
-        ...((cached as any).payload || {}),
+        ...cachedPayload,
       });
     }
   }
@@ -153,6 +215,16 @@ export async function GET(req: Request) {
 
     const fullPayload = { ...payload, alerts };
 
+    try {
+      await createWeatherAlertsAndNotify({
+        userId,
+        locationName,
+        alerts,
+      });
+    } catch {
+      // non-blocking
+    }
+
     // 4) Upsert cache
     await WeatherCache.updateOne(
       { key },
@@ -171,6 +243,16 @@ export async function GET(req: Request) {
   } catch (err: any) {
     // 5) Fallback to last known cache
     if (cached?.payload) {
+      try {
+        await createWeatherAlertsAndNotify({
+          userId,
+          locationName: (cached as any).payload?.locationName || city,
+          alerts: (cached as any).payload?.alerts || [],
+        });
+      } catch {
+        // non-blocking
+      }
+
       return Response.json({
         ok: true,
         source: "fallback-cache",

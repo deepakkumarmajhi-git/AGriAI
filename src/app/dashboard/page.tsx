@@ -156,11 +156,12 @@ export default function DashboardPage() {
     if (weatherInFlightRef.current) return;
 
     try {
+      const userId = localStorage.getItem("smartAgriUserId") || "";
       weatherInFlightRef.current = true;
       setWeatherLoading(true);
       setWeatherError(null);
 
-      const res = await fetch(`/api/weather/forecast?city=${encodeURIComponent(city)}`, {
+      const res = await fetch(`/api/weather/forecast?city=${encodeURIComponent(city)}&userId=${encodeURIComponent(userId)}`, {
         cache: "no-store",
       });
       const data = await res.json();
@@ -213,7 +214,7 @@ export default function DashboardPage() {
   const moistureText = sensorLatest?.moisture == null ? "—" : `${Math.round(sensorLatest.moisture)}%`;
 
   const tempText =
-    weather?.current?.temperature_2m == null ? "—" : `${Math.round(weather.current.temperature_2m)}°C`;
+    weather?.current?.temperature_2m == null ? "0" : `${Math.round(weather.current.temperature_2m)}°C`;
 
   const humText =
     weather?.current?.relative_humidity_2m == null ? "—" : `${Math.round(weather.current.relative_humidity_2m)}%`;
@@ -244,9 +245,9 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Welcome, {name} 👋</h1>
-              <p className="mt-1 text-slate-600">
+              {/* <p className="mt-1 text-slate-600">
                 Weather forecasting (India-ready): cached 6 hours + fallback + alerts.
-              </p>
+              </p> */}
 
               <button
                 onClick={() => router.push("/weather")}
@@ -261,7 +262,7 @@ export default function DashboardPage() {
               <div className="mt-1">
                 Next refresh in <b>{nextRefreshText}</b>
               </div>
-              <div className="mt-1 text-xs text-slate-500">Source: {sourceText}</div>
+              {/* <div className="mt-1 text-xs text-slate-500">Source: {sourceText}</div> */}
             </div>
           </div>
 
@@ -274,9 +275,9 @@ export default function DashboardPage() {
                 placeholder="e.g., Bhubaneswar, India"
                 className="mt-1 w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-green-200"
               />
-              <p className="mt-1 text-xs text-slate-500">
+              {/* <p className="mt-1 text-xs text-slate-500">
                 Example: “Bhubaneswar, India”, “Cuttack, India”, “Balasore, India”
-              </p>
+              </p> */}
             </div>
 
             <div className="flex items-end">

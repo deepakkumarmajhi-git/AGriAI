@@ -10,6 +10,7 @@ const UserSchema = new Schema(
     role: { type: String, enum: ["farmer", "admin"], default: "farmer" },
     phone: { type: String, default: "" },
     language: { type: String, default: "en" },
+    theme: { type: String, enum: ["dark", "light"], default: "dark" },
   },
   { timestamps: true }
 );
