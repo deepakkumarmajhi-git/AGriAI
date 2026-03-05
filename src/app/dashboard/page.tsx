@@ -13,13 +13,52 @@ type ScanItem = {
   imageName: string;
 };
 
-type AlertItem = {
-  id: string;
-  level: "info" | "warning" | "critical";
-  title: string;
-  message: string;
-  resolved: boolean;
-  createdAt: string;
+type PlanRisk = {
+  name: string;
+  risk: "low" | "medium" | "high";
+  reason: string;
+  prevention: string;
+  watchFor: string;
+};
+
+type PlanIrrigation = {
+  date: string;
+  recommendation: string;
+  reason: string;
+  intensity: "low" | "medium" | "high";
+};
+
+type FarmPlan = {
+  _id: string;
+  cropName: string;
+  stage: "planning" | "sown" | "vegetative" | "flowering" | "fruiting" | "harvest-ready" | "harvested";
+  sowingDate: string;
+  location?: {
+    city?: string;
+    district?: string;
+    state?: string;
+  };
+  scanPlan?: {
+    daysPerWeek?: number;
+    lastScanAt?: string;
+    nextScanDueAt?: string;
+    adherenceScore?: number;
+  };
+  linkedScans?: {
+    scanId?: string;
+    date?: string;
+    result?: string;
+    confidence?: number;
+  }[];
+  latestAdvice?: {
+    generatedAt?: string;
+    todayTasks?: string[];
+    irrigationNext7Days?: PlanIrrigation[];
+    diseaseRisks?: PlanRisk[];
+    summary?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type SensorLatest = {
@@ -53,6 +92,13 @@ type WeatherForecast = {
   };
 
   alerts?: { type: string; level: "info" | "warning" | "critical"; message: string }[];
+  daily?: {
+    time: string[];
+    temperature_2m_max: number[];
+    temperature_2m_min: number[];
+    precipitation_sum: number[];
+    precipitation_probability_max: number[];
+  };
 } | null;
 
 const WEATHER_REFRESH_MS = 5 * 60 * 1000; // 5 minutes (cache is 6 hours, but this keeps UI responsive)
@@ -212,18 +258,148 @@ function formatMMSS(ms: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function stageProgress(stage: FarmPlan["stage"] | string | undefined) {
+  switch (stage) {
+    case "planning":
+      return 10;
+    case "sown":
+      return 24;
+    case "vegetative":
+      return 44;
+    case "flowering":
+      return 64;
+    case "fruiting":
+      return 80;
+    case "harvest-ready":
+      return 94;
+    case "harvested":
+      return 100;
+    default:
+      return 20;
+  }
+}
+
+function toShortDayLabel(raw: string) {
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString(undefined, { weekday: "short" });
+}
+
+function weatherImpactScore(tempMax: number, rainChance: number, rainMm: number) {
+  let score = 84;
+  const tPenalty = Math.max(0, Math.abs(tempMax - 28) - 4) * 5.2;
+  score -= tPenalty;
+
+  if (rainChance >= 70) score -= (rainChance - 70) * 0.45;
+  if (rainChance <= 15 && rainMm < 1) score -= (15 - rainChance) * 0.7;
+  if (rainMm >= 14) score -= (rainMm - 14) * 0.75;
+
+  return clamp(Math.round(score), 18, 96);
+}
+
+function scanHealthScore(scans: FarmPlan["linkedScans"] = []) {
+  if (!scans.length) return 62;
+  const recent = [...scans].slice(-4);
+
+  let score = 72;
+  for (const s of recent) {
+    const result = String(s.result || "").toLowerCase();
+    const conf = clamp(Number(s.confidence || 0), 0, 1);
+    if (result && result !== "healthy") score -= conf * 22;
+    else score += conf * 7;
+  }
+
+  return clamp(Math.round(score), 22, 96);
+}
+
+function riskWeight(risk?: string) {
+  if (risk === "high") return 3;
+  if (risk === "medium") return 2;
+  return 1;
+}
+
+function TrendLine({
+  title,
+  subtitle,
+  labels,
+  values,
+  stroke,
+  fill,
+}: {
+  title: string;
+  subtitle: string;
+  labels: string[];
+  values: number[];
+  stroke: string;
+  fill: string;
+}) {
+  const points = values.length >= 2 ? values : [values[0] ?? 0, values[0] ?? 0];
+  const width = 320;
+  const height = 130;
+  const pad = 16;
+
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = Math.max(1, max - min);
+
+  const mapped = points.map((v, i) => {
+    const x = pad + (i * (width - pad * 2)) / Math.max(1, points.length - 1);
+    const y = height - pad - ((v - min) / range) * (height - pad * 2);
+    return { x, y };
+  });
+
+  const linePath = mapped.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+  const areaPath = `${linePath} L ${mapped[mapped.length - 1].x},${height - pad} L ${mapped[0].x},${height - pad} Z`;
+
+  const previewLabels = labels.length >= 3
+    ? [labels[0], labels[Math.floor(labels.length / 2)], labels[labels.length - 1]]
+    : labels;
+
+  return (
+    <div className="rounded-xl border bg-slate-50 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="text-xs font-semibold text-slate-900">{title}</div>
+          <div className="text-[11px] text-slate-600">{subtitle}</div>
+        </div>
+        <div className="text-right text-[11px] text-slate-500">
+          <div>Min: {Math.round(min)}</div>
+          <div>Max: {Math.round(max)}</div>
+        </div>
+      </div>
+
+      <svg viewBox={`0 0 ${width} ${height}`} className="mt-2 h-28 w-full">
+        <path d={areaPath} fill={fill} />
+        <path d={linePath} fill="none" stroke={stroke} strokeWidth={2.5} strokeLinecap="round" />
+        {mapped.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r={2.8} fill={stroke} />
+        ))}
+      </svg>
+
+      <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
+        {previewLabels.map((x, i) => (
+          <span key={`${x}-${i}`}>{x}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
 
   const [scans, setScans] = useState<ScanItem[]>([]);
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [sensorLatest, setSensorLatest] = useState<SensorLatest>(null);
+  const [recentPlan, setRecentPlan] = useState<FarmPlan | null>(null);
 
   const [weatherCity, setWeatherCity] = useState("");
   const [weather, setWeather] = useState<WeatherForecast>(null);
+  const [planWeather, setPlanWeather] = useState<WeatherForecast>(null);
 
   const [loading, setLoading] = useState(true);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [planWeatherLoading, setPlanWeatherLoading] = useState(false);
+  const [planRecomputing, setPlanRecomputing] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
 
   const weatherInFlightRef = useRef(false);
@@ -246,6 +422,31 @@ export default function DashboardPage() {
     setWeatherCity(savedCity);
   }, []);
 
+  async function loadPlanWeather(city: string, userId: string) {
+    if (!city || !userId) {
+      setPlanWeather(null);
+      return;
+    }
+
+    setPlanWeatherLoading(true);
+    try {
+      const res = await fetch(
+        `/api/weather/forecast?city=${encodeURIComponent(city)}&userId=${encodeURIComponent(userId)}`,
+        { cache: "no-store" }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setPlanWeather(null);
+        return;
+      }
+      setPlanWeather(data);
+    } catch {
+      setPlanWeather(null);
+    } finally {
+      setPlanWeatherLoading(false);
+    }
+  }
+
   async function loadCore() {
     try {
       const userId = localStorage.getItem("smartAgriUserId");
@@ -256,23 +457,57 @@ export default function DashboardPage() {
 
       setLoading(true);
 
-      const [scansRes, alertsRes, sensorsRes] = await Promise.all([
+      const [scansRes, sensorsRes, plansRes] = await Promise.all([
         fetch(`/api/scans?userId=${encodeURIComponent(userId)}`),
-        fetch(`/api/alerts?userId=${encodeURIComponent(userId)}`),
         fetch(`/api/sensors?userId=${encodeURIComponent(userId)}`),
+        fetch(`/api/farm-plans?userId=${encodeURIComponent(userId)}`),
       ]);
 
       const scansData = await scansRes.json();
-      const alertsData = await alertsRes.json();
       const sensorsData = await sensorsRes.json();
+      const plansData = await plansRes.json();
 
       if (scansRes.ok) setScans(scansData.scans || []);
-      if (alertsRes.ok) setAlerts(alertsData.alerts || []);
       if (sensorsRes.ok) setSensorLatest(sensorsData.latest || null);
+      if (plansRes.ok) {
+        const latestPlan = (plansData.plans || [])[0] || null;
+        setRecentPlan(latestPlan);
+        if (latestPlan?.location?.city) {
+          void loadPlanWeather(String(latestPlan.location.city), userId);
+        } else {
+          setPlanWeather(null);
+        }
+      }
     } catch {
       // ignore
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function recomputeRecentPlan() {
+    const userId = localStorage.getItem("smartAgriUserId") || "";
+    if (!userId || !recentPlan?._id) return;
+
+    setPlanRecomputing(true);
+    try {
+      const res = await fetch(`/api/farm-plans/${recentPlan._id}/recompute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+
+      const updated = (data?.plan || null) as FarmPlan | null;
+      if (updated) {
+        setRecentPlan(updated);
+        if (updated.location?.city) {
+          await loadPlanWeather(String(updated.location.city), userId);
+        }
+      }
+    } finally {
+      setPlanRecomputing(false);
     }
   }
 
@@ -367,6 +602,81 @@ export default function DashboardPage() {
       : "—";
 
   const nextRefreshText = formatMMSS(nextRefreshInMs);
+
+  const recentPlanScans = useMemo(() => {
+    return [...(recentPlan?.linkedScans || [])]
+      .sort((a, b) => new Date(b.date || "").getTime() - new Date(a.date || "").getTime())
+      .slice(0, 4);
+  }, [recentPlan]);
+
+  const planAdviceStale = useMemo(() => {
+    const generatedAt = recentPlan?.latestAdvice?.generatedAt;
+    if (!generatedAt) return true;
+    const ageMs = Date.now() - new Date(generatedAt).getTime();
+    return ageMs > 6 * 60 * 60 * 1000;
+  }, [recentPlan]);
+
+  const scanDueInfo = useMemo(() => {
+    const due = recentPlan?.scanPlan?.nextScanDueAt;
+    if (!due) {
+      return { label: "Scan schedule not generated yet", overdue: true };
+    }
+    const dueAt = new Date(due);
+    if (Number.isNaN(dueAt.getTime())) {
+      return { label: "Invalid scan schedule date", overdue: true };
+    }
+    const overdue = dueAt.getTime() <= Date.now();
+    return { label: overdue ? "Scan is due now" : `Next scan: ${fmtTime(due)}`, overdue };
+  }, [recentPlan]);
+
+  const planSeries = useMemo(() => {
+    const d = planWeather?.daily;
+    const length = Math.max(
+      0,
+      Math.min(
+        7,
+        d?.time?.length || 0,
+        d?.temperature_2m_max?.length || 0,
+        d?.precipitation_probability_max?.length || 0,
+        d?.precipitation_sum?.length || 0
+      )
+    );
+
+    const labels: string[] = [];
+    const impact: number[] = [];
+    for (let i = 0; i < length; i += 1) {
+      labels.push(toShortDayLabel(d?.time?.[i] || `D${i + 1}`));
+      impact.push(
+        weatherImpactScore(
+          Number(d?.temperature_2m_max?.[i] || 0),
+          Number(d?.precipitation_probability_max?.[i] || 0),
+          Number(d?.precipitation_sum?.[i] || 0)
+        )
+      );
+    }
+
+    if (!labels.length) {
+      const fallback = ["D1", "D2", "D3", "D4", "D5", "D6", "D7"];
+      const defaultImpact = [70, 68, 71, 69, 67, 70, 72];
+      labels.push(...fallback);
+      impact.push(...defaultImpact);
+    }
+
+    const growth: number[] = [];
+    let cursor = stageProgress(recentPlan?.stage);
+    const scanScore = scanHealthScore(recentPlan?.linkedScans || []);
+    const riskPenalty = riskWeight(recentPlan?.latestAdvice?.diseaseRisks?.[0]?.risk) * 0.35;
+
+    for (let i = 0; i < labels.length; i += 1) {
+      const impactBoost = (impact[i] - 50) * 0.055;
+      const scanBoost = (scanScore - 60) * 0.028;
+      const delta = Math.max(0.25, 1.55 + impactBoost + scanBoost - riskPenalty);
+      cursor = clamp(cursor + delta, 8, 100);
+      growth.push(Math.round(cursor));
+    }
+
+    return { labels, impact, growth, scanScore };
+  }, [planWeather, recentPlan]);
 
   return (
     <AppShell>
@@ -484,7 +794,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Scans + Alerts blocks remain as before */}
+        {/* Scans + Farm AI recent plan */}
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-2xl border bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
@@ -523,34 +833,180 @@ export default function DashboardPage() {
           </div>
 
           <div className="rounded-2xl border bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900">Recent Alerts</h2>
-              <button
-                onClick={() => router.push("/alerts")}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-              >
-                View All
-              </button>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-slate-900">Recent Farm AI Plan</h2>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => router.push("/farm-ai")}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                >
+                  Open Plans
+                </button>
+                {recentPlan?._id ? (
+                  <button
+                    onClick={() => router.push(`/farm-ai/${recentPlan._id}`)}
+                    className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                  >
+                    Open Plan
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             {loading ? (
               <p className="mt-4 text-sm text-slate-600">Loading...</p>
-            ) : alerts.length === 0 ? (
+            ) : !recentPlan ? (
               <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-                No alerts yet. Alerts will appear after scans or sensor rules.
+                No Farm AI plan found. Create one to get daily crop analysis, scan routine, and weather impact graphs.
+                <div className="mt-3">
+                  <button
+                    onClick={() => router.push("/farm-ai/new")}
+                    className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                  >
+                    Create Farm AI Plan
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="mt-4 space-y-3">
-                {alerts.slice(0, 5).map((a) => (
-                  <div key={a.id} className="rounded-xl border border-slate-100 p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-slate-900">{a.title}</p>
-                      <span className="text-xs text-slate-500">{a.level.toUpperCase()}</span>
+              <div className="mt-4 space-y-4">
+                <div className="rounded-xl border bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {recentPlan.cropName} | {recentPlan.location?.city || "Location not set"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-600">
+                        Stage: <b>{recentPlan.stage}</b> | Sowing:{" "}
+                        <b>{recentPlan.sowingDate ? fmtTime(recentPlan.sowingDate) : "N/A"}</b>
+                      </p>
                     </div>
-                    <p className="mt-1 text-sm text-slate-600 line-clamp-2">{a.message}</p>
-                    <p className="mt-2 text-xs text-slate-500">{fmtTime(a.createdAt)}</p>
+                    <div className="text-right">
+                      <p className="text-xs text-slate-600">Scan health score</p>
+                      <p className="text-xl font-bold text-emerald-700">{planSeries.scanScore}/100</p>
+                    </div>
                   </div>
-                ))}
+
+                  <div className={`mt-3 rounded-lg border px-3 py-2 text-sm ${scanDueInfo.overdue ? "border-amber-300 bg-amber-50 text-amber-800" : "border-emerald-300 bg-emerald-50 text-emerald-800"}`}>
+                    {scanDueInfo.label}.{" "}
+                    {recentPlan.scanPlan?.lastScanAt
+                      ? `Last scan: ${fmtTime(recentPlan.scanPlan.lastScanAt)}.`
+                      : "No linked scan yet."}
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => router.push(`/scan?farmPlanId=${encodeURIComponent(recentPlan._id)}`)}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                    >
+                      Scan for this plan
+                    </button>
+                    <button
+                      onClick={recomputeRecentPlan}
+                      disabled={planRecomputing}
+                      className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
+                    >
+                      {planRecomputing ? "Updating..." : "Refresh analysis"}
+                    </button>
+                    {planAdviceStale ? (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                        Advice needs refresh
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                        Advice up to date
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <TrendLine
+                    title="Projected Growth Curve"
+                    subtitle="Estimated progression over the next 7 days"
+                    labels={planSeries.labels}
+                    values={planSeries.growth}
+                    stroke="#22c55e"
+                    fill="rgba(34, 197, 94, 0.16)"
+                  />
+                  <TrendLine
+                    title="Weather Impact Index"
+                    subtitle={planWeatherLoading ? "Refreshing weather..." : "Higher score means better conditions"}
+                    labels={planSeries.labels}
+                    values={planSeries.impact}
+                    stroke="#0ea5e9"
+                    fill="rgba(14, 165, 233, 0.14)"
+                  />
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="rounded-xl border bg-slate-50 p-3">
+                    <div className="text-xs font-semibold text-slate-900">Today's Tasks</div>
+                    {(recentPlan.latestAdvice?.todayTasks || []).length ? (
+                      <ul className="mt-2 space-y-1 text-xs text-slate-700">
+                        {(recentPlan.latestAdvice?.todayTasks || []).slice(0, 5).map((t, i) => (
+                          <li key={`${t}-${i}`}>- {t}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-xs text-slate-600">
+                        No tasks generated yet. Click "Refresh analysis" to produce today tasks.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border bg-slate-50 p-3">
+                    <div className="text-xs font-semibold text-slate-900">Recent Scan Signals</div>
+                    {recentPlanScans.length ? (
+                      <div className="mt-2 space-y-2">
+                        {recentPlanScans.map((s, i) => (
+                          <div key={`${s.scanId || "scan"}-${i}`} className="rounded-lg border bg-white px-2 py-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-semibold text-slate-900">{s.result || "Scan"}</span>
+                              <span className="text-[11px] text-slate-600">
+                                {Math.round(Number(s.confidence || 0) * 100)}%
+                              </span>
+                            </div>
+                            <div className="mt-0.5 text-[11px] text-slate-500">{s.date ? fmtTime(s.date) : "N/A"}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs text-slate-600">
+                        No linked scans. Run a scan to improve risk detection and planning quality.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {(recentPlan.latestAdvice?.diseaseRisks || []).length ? (
+                  <div className="rounded-xl border bg-slate-50 p-3">
+                    <div className="text-xs font-semibold text-slate-900">Top Risk Notes</div>
+                    <div className="mt-2 space-y-2">
+                      {(recentPlan.latestAdvice?.diseaseRisks || []).slice(0, 2).map((r, i) => (
+                        <div key={`${r.name}-${i}`} className="rounded-lg border bg-white p-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-semibold text-slate-900">{r.name}</p>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                r.risk === "high"
+                                  ? "bg-rose-100 text-rose-700"
+                                  : r.risk === "medium"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-emerald-100 text-emerald-700"
+                              }`}
+                            >
+                              {String(r.risk).toUpperCase()}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[11px] text-slate-600">{r.reason}</p>
+                          <p className="mt-1 text-[11px] text-slate-600">
+                            Prevention: <b>{r.prevention || "Keep monitoring and scan frequently."}</b>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
