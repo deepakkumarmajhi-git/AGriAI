@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from PIL import Image
 import io
 import random
@@ -9,15 +10,22 @@ import numpy as np
 import joblib
 from pydantic import BaseModel
 
+# ✅ TensorFlow for .h5
+import tensorflow as tf
+import json
+import traceback
+
 app = FastAPI()
 
 # -------------------------
-# Soil Analysis (Crop Recommendation) - NEW
+# Paths
 # -------------------------
-
 BASE = Path(__file__).resolve().parent
 MODEL_DIR = BASE / "models"
 
+# -------------------------
+# Soil Analysis (Crop Recommendation)
+# -------------------------
 CROP_MODEL_PATH = MODEL_DIR / "soil_model.pkl"
 CROP_ENCODER_PATH = MODEL_DIR / "label_encoder.pkl"
 
@@ -62,8 +70,6 @@ def _build_features(inp: SoilInput):
     else:
         ph_type = 2
 
-    # IMPORTANT: This matches your feature list you shared:
-    # ['N','P','K','temperature','humidity','ph','rainfall','N_P_ratio','N_K_ratio','P_K_ratio','soil_health_index','ph_type']
     X = np.array([[
         inp.N, inp.P, inp.K,
         inp.temperature, inp.humidity,
@@ -76,10 +82,6 @@ def _build_features(inp: SoilInput):
 
 @app.post("/predict-crop")
 def predict_crop(inp: SoilInput):
-    """
-    Input: N, P, K, temperature, humidity, ph, rainfall
-    Output: top crops (top-5 if model supports predict_proba)
-    """
     _load_crop_assets()
     X = _build_features(inp)
 
@@ -100,7 +102,112 @@ def predict_crop(inp: SoilInput):
 
     return {"crops": crops, "confidences": confidences}
 
-# allow your Next.js app to call this
+# -------------------------
+# ✅ Leaf Disease Detection (.h5)
+# -------------------------
+LEAF_MODEL_PATH = MODEL_DIR / "leaf_model.h5"
+LEAF_LABELS_PATH = MODEL_DIR / "leaf_labels.json"
+
+_leaf_model = None
+_leaf_labels = None
+
+def _load_leaf_assets():
+    global _leaf_model, _leaf_labels
+
+    if _leaf_labels is None:
+        if not LEAF_LABELS_PATH.exists():
+            raise FileNotFoundError(f"Missing labels: {LEAF_LABELS_PATH}")
+        with open(LEAF_LABELS_PATH, "r", encoding="utf-8") as f:
+            _leaf_labels = json.load(f)
+        if not isinstance(_leaf_labels, list) or len(_leaf_labels) == 0:
+            raise ValueError("leaf_labels.json must be a non-empty JSON array of strings")
+
+    if _leaf_model is None:
+        if not LEAF_MODEL_PATH.exists():
+            raise FileNotFoundError(f"Missing model: {LEAF_MODEL_PATH}")
+        _leaf_model = tf.keras.models.load_model(str(LEAF_MODEL_PATH))
+
+def _leaf_input_size() -> int:
+    """
+    Auto-detect input size from the model.
+    Usually (None, 224, 224, 3) or (None, 256, 256, 3)
+    """
+    _load_leaf_assets()
+    shape = _leaf_model.input_shape
+    if isinstance(shape, list):
+        shape = shape[0]
+    # shape: (None, H, W, C)
+    h = int(shape[1]) if shape and len(shape) > 2 and shape[1] else 224
+    return h
+
+def _preprocess_leaf_image(img: Image.Image) -> np.ndarray:
+    size = _leaf_input_size()
+    img = img.convert("RGB")
+    img = img.resize((size, size))
+    arr = np.asarray(img).astype(np.float32) / 255.0
+    arr = np.expand_dims(arr, axis=0)
+    return arr
+
+def _predict_leaf_from_bytes(content: bytes):
+    _load_leaf_assets()
+
+    img = Image.open(io.BytesIO(content)).convert("RGB")
+    x = _preprocess_leaf_image(img)
+
+    preds = _leaf_model.predict(x)
+    if preds is None or len(preds) == 0:
+        raise RuntimeError("Model returned empty prediction")
+
+    probs = preds[0].astype(float)
+    idx = int(np.argmax(probs))
+    conf = float(probs[idx])
+
+    # top-3 helpful info
+    top_idx = probs.argsort()[-3:][::-1]
+    top3 = [{
+        "label": _leaf_labels[int(i)] if int(i) < len(_leaf_labels) else f"class_{int(i)}",
+        "confidence": float(probs[int(i)])
+    } for i in top_idx]
+
+    label = _leaf_labels[idx] if idx < len(_leaf_labels) else f"class_{idx}"
+
+    return label, conf, top3
+
+@app.post("/predict-leaf")
+async def predict_leaf(image: UploadFile = File(...)):
+    try:
+        content = await image.read()
+
+        # validate image early
+        try:
+            img = Image.open(io.BytesIO(content)).convert("RGB")
+            _ = img.size
+        except Exception:
+            return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid image"})
+
+        label, confidence, top3 = _predict_leaf_from_bytes(content)
+
+        return {
+            "ok": True,
+            "label": label,
+            "confidence": confidence,
+            "top3": top3
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "ok": False,
+                "error": "Leaf prediction failed",
+                "details": str(e),
+                "trace": traceback.format_exc()
+            }
+        )
+
+# -------------------------
+# CORS (keep your existing)
+# -------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # for MVP; tighten later
@@ -113,26 +220,55 @@ app.add_middleware(
 def health():
     return {"ok": True, "service": "ml-server"}
 
+# -------------------------
+# ✅ Backward compatible endpoint used by your Next.js scan UI
+# `/predict` now returns "result" like before, but based on real model output.
+# -------------------------
 @app.post("/predict")
 async def predict(image: UploadFile = File(...)):
     content = await image.read()
 
-    # validate image (prevents random file crash)
+    # validate image
     try:
         img = Image.open(io.BytesIO(content)).convert("RGB")
         _ = img.size
     except Exception:
         return {"ok": False, "error": "Invalid image"}
 
-    # ✅ MVP mock (replace with real model later)
-    preds = [
-        {"disease": "Healthy", "confidence": 0.93, "recommendation": "No action needed."},
-        {"disease": "Leaf Spot", "confidence": 0.78, "recommendation": "Remove affected leaves and avoid overhead watering."},
-        {"disease": "Early Blight", "confidence": 0.74, "recommendation": "Improve airflow and treat as per guidance."},
-    ]
-    result = random.choice(preds)
+    try:
+        label, confidence, top3 = _predict_leaf_from_bytes(content)
 
-    return {"ok": True, "result": result}
+        # Basic recommendation placeholder (you can replace with your own mapping)
+        recommendation = (
+            "Use organic neem spray + remove infected leaves. "
+            "If severe, consult local agri officer for recommended fungicide."
+        )
+
+        return {
+            "ok": True,
+            "result": {
+                "disease": label,
+                "confidence": float(confidence),
+                "recommendation": recommendation,
+                "top3": top3
+            }
+        }
+
+    except Exception as e:
+        # fallback to your old mock if model missing (so app never breaks)
+        preds = [
+            {"disease": "Healthy", "confidence": 0.93, "recommendation": "No action needed."},
+            {"disease": "Leaf Spot", "confidence": 0.78, "recommendation": "Remove affected leaves and avoid overhead watering."},
+            {"disease": "Early Blight", "confidence": 0.74, "recommendation": "Improve airflow and treat as per guidance."},
+        ]
+        result = random.choice(preds)
+
+        return {
+            "ok": False,
+            "error": "Real model failed. Using fallback mock.",
+            "details": str(e),
+            "result": result
+        }
 
 # start ML server
 # uvicorn main:app --reload --port 8000

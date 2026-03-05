@@ -10,3 +10,7 @@ python-multipart
 joblib==1.4.2
 scikit-learn==1.5.2
 pydantic==2.8.2
+
+
+
+tensorflow

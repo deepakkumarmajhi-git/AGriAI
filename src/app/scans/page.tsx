@@ -10,6 +10,10 @@ type ScanItem = {
   crop: string;
   disease: string;
   confidence: number;
+  reason: string;
+  organicTreatment: string;
+  artificialTreatment: string;
+  prevention: string;
   recommendation: string;
   imageName: string;
   imageUrl: string;
@@ -212,9 +216,33 @@ export default function ScansPage() {
                   <div className="text-xs text-slate-500">{fmtTime(s.createdAt)}</div>
                 </div>
 
-                {s.recommendation ? (
-                  <div className="mt-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
-                    <b>Recommendation:</b> {s.recommendation}
+                {s.recommendation || s.reason || s.organicTreatment || s.artificialTreatment || s.prevention ? (
+                  <div className="mt-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-700 space-y-2">
+                    {s.reason ? (
+                      <p>
+                        <b>Reason:</b> {s.reason}
+                      </p>
+                    ) : null}
+                    {s.organicTreatment ? (
+                      <p>
+                        <b>Organic Treatment:</b> {s.organicTreatment}
+                      </p>
+                    ) : null}
+                    {s.artificialTreatment ? (
+                      <p>
+                        <b>Artificial Treatment:</b> {s.artificialTreatment}
+                      </p>
+                    ) : null}
+                    {s.prevention ? (
+                      <p>
+                        <b>Prevention:</b> {s.prevention}
+                      </p>
+                    ) : null}
+                    {s.recommendation ? (
+                      <p>
+                        <b>Recommendation:</b> {s.recommendation}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

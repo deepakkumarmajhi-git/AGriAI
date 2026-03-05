@@ -13,6 +13,10 @@ const ScanSchema = new Schema(
     disease: { type: String, required: true },
     confidence: { type: Number, required: true, min: 0, max: 1 },
     recommendation: { type: String, default: "" },
+    reason: { type: String, default: "" },
+    organicTreatment: { type: String, default: "" },
+    artificialTreatment: { type: String, default: "" },
+    prevention: { type: String, default: "" },
 
     source: { type: String, enum: ["web", "mobile", "edge"], default: "web" },
     modelVersion: { type: String, default: "mvp-mock" },

@@ -42,19 +42,44 @@ export async function POST(req: Request) {
       {
         disease: "Healthy",
         confidence: 0.93,
-        recommendation: "No action needed. Keep monitoring moisture and pests.",
+        reason:
+          "Leaf surface looks uniform with no major fungal spots, yellow halos, or rot-like lesions.",
+        organicTreatment:
+          "No treatment needed. Continue low-cost home care: morning watering, clean tools, and remove dry leaves.",
+        artificialTreatment:
+          "No chemical treatment required at this stage.",
+        prevention:
+          "Inspect leaves every 2-3 days, avoid water stagnation, and maintain plant spacing for airflow.",
+        recommendation:
+          "No action needed now. Keep monitoring with regular field checks.",
       },
       {
         disease: "Leaf Spot (suspected)",
         confidence: 0.78,
+        reason:
+          "Likely caused by high humidity, leaf wetness, and fungal/bacterial infection spread through splash water.",
+        organicTreatment:
+          "Remove infected leaves, spray diluted neem oil or baking-soda solution, and avoid overhead irrigation. These are low-cost in-home options.",
+        artificialTreatment:
+          "If spread continues, use a copper oxychloride or mancozeb based fungicide as per local label and safety instructions.",
+        prevention:
+          "Water only at root zone, improve airflow by pruning dense canopy, and disinfect tools after use.",
         recommendation:
-          "Remove affected leaves, avoid overhead watering, improve airflow. Use safe fungicide if needed.",
+          "Start with organic control for 3-5 days; shift to chemical fungicide only if progression continues.",
       },
       {
         disease: "Early Blight (suspected)",
         confidence: 0.74,
+        reason:
+          "Commonly linked to fungal pressure in warm-humid weather, weak plant nutrition, and repeated leaf wetness.",
+        organicTreatment:
+          "Prune affected leaves, apply compost tea or neem-based spray, and add mulch to reduce soil splash. These are low-cost farm practices.",
+        artificialTreatment:
+          "Use recommended fungicides like chlorothalonil or mancozeb (follow local advisory, dosage, and protective gear).",
+        prevention:
+          "Rotate crops, maintain balanced nutrients, irrigate in morning, and scan leaves weekly for early symptoms.",
         recommendation:
-          "Remove infected leaves, maintain spacing, and apply appropriate treatment based on crop guidance.",
+          "Immediately remove infected parts and begin treatment; repeat follow-up scan in 48 hours.",
       },
     ];
 
@@ -69,6 +94,10 @@ export async function POST(req: Request) {
       disease: result.disease,
       confidence: result.confidence,
       recommendation: result.recommendation,
+      reason: result.reason,
+      organicTreatment: result.organicTreatment,
+      artificialTreatment: result.artificialTreatment,
+      prevention: result.prevention,
       source: "web",
       modelVersion: "mvp-mock",
     });

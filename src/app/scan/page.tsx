@@ -8,6 +8,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 type Result = {
   disease: string;
   confidence: number;
+  reason: string;
+  organicTreatment: string;
+  artificialTreatment: string;
+  prevention: string;
   recommendation: string;
 };
 
@@ -566,6 +570,30 @@ export default function ScanPage() {
                     <p className="mt-1 text-xl font-bold text-slate-900">
                       {(result.confidence * 100).toFixed(0)}%
                     </p>
+                  </div>
+
+                  <div className="rounded-xl border p-4">
+                    <p className="text-sm font-semibold text-slate-600">Reason for Disease</p>
+                    <p className="mt-1 text-slate-700">{result.reason || "No reason available."}</p>
+                  </div>
+
+                  <div className="rounded-xl border p-4">
+                    <p className="text-sm font-semibold text-slate-600">Organic Treatment (Zero/Low Cost)</p>
+                    <p className="mt-1 text-slate-700">
+                      {result.organicTreatment || "No organic treatment available."}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border p-4">
+                    <p className="text-sm font-semibold text-slate-600">Artificial Treatment (Chemical)</p>
+                    <p className="mt-1 text-slate-700">
+                      {result.artificialTreatment || "No artificial treatment available."}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border p-4">
+                    <p className="text-sm font-semibold text-slate-600">Prevention and Follow-up</p>
+                    <p className="mt-1 text-slate-700">{result.prevention || "No prevention guidance available."}</p>
                   </div>
 
                   <div className="rounded-xl border p-4">

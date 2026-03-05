@@ -3,7 +3,7 @@
 import AppShell from "@/components/layout/AppShell";
 import { requireAuthOrRedirect } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 type ScanItem = {
   id: string;
@@ -57,12 +57,142 @@ type WeatherForecast = {
 
 const WEATHER_REFRESH_MS = 5 * 60 * 1000; // 5 minutes (cache is 6 hours, but this keeps UI responsive)
 
-function Card({ title, value, sub }: { title: string; value: string; sub?: string }) {
+type MetricKind = "moisture" | "temperature" | "humidity" | "rain";
+
+const metricPalette: Record<
+  MetricKind,
+  {
+    c1: string;
+    c2: string;
+    c3: string;
+    border: string;
+    badge: string;
+    bar: string;
+    value: string;
+  }
+> = {
+  moisture: {
+    c1: "rgba(56, 189, 248, 0.22)",
+    c2: "rgba(14, 165, 233, 0.16)",
+    c3: "rgba(59, 130, 246, 0.16)",
+    border: "border-cyan-100",
+    badge: "bg-cyan-100 text-cyan-700",
+    bar: "from-cyan-500 to-sky-500",
+    value: "text-cyan-700",
+  },
+  temperature: {
+    c1: "rgba(251, 146, 60, 0.22)",
+    c2: "rgba(239, 68, 68, 0.18)",
+    c3: "rgba(245, 158, 11, 0.16)",
+    border: "border-orange-100",
+    badge: "bg-orange-100 text-orange-700",
+    bar: "from-orange-500 to-rose-500",
+    value: "text-orange-700",
+  },
+  humidity: {
+    c1: "rgba(99, 102, 241, 0.22)",
+    c2: "rgba(168, 85, 247, 0.18)",
+    c3: "rgba(59, 130, 246, 0.14)",
+    border: "border-indigo-100",
+    badge: "bg-indigo-100 text-indigo-700",
+    bar: "from-indigo-500 to-violet-500",
+    value: "text-indigo-700",
+  },
+  rain: {
+    c1: "rgba(14, 165, 233, 0.2)",
+    c2: "rgba(16, 185, 129, 0.16)",
+    c3: "rgba(59, 130, 246, 0.16)",
+    border: "border-sky-100",
+    badge: "bg-sky-100 text-sky-700",
+    bar: "from-sky-500 to-emerald-500",
+    value: "text-sky-700",
+  },
+};
+
+function clamp(v: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, v));
+}
+
+function extractNumber(value: string) {
+  const m = value.match(/-?\d+(\.\d+)?/);
+  if (!m) return null;
+  const n = Number(m[0]);
+  return Number.isFinite(n) ? n : null;
+}
+
+function metricIntensity(kind: MetricKind, value: string) {
+  const n = extractNumber(value);
+  if (n == null) return 16;
+  if (kind === "temperature") {
+    return clamp(((n + 5) / 50) * 100, 0, 100);
+  }
+  return clamp(n, 0, 100);
+}
+
+function metricLabel(kind: MetricKind, value: string) {
+  const n = extractNumber(value);
+  if (n == null) return "No data";
+
+  if (kind === "moisture") {
+    if (n < 35) return "Dry soil";
+    if (n <= 70) return "Balanced";
+    return "High moisture";
+  }
+
+  if (kind === "temperature") {
+    if (n < 20) return "Cool";
+    if (n <= 32) return "Optimal";
+    return "Heat risk";
+  }
+
+  if (kind === "humidity") {
+    if (n < 45) return "Low RH";
+    if (n <= 75) return "Normal RH";
+    return "High RH";
+  }
+
+  if (n < 30) return "Low rain";
+  if (n <= 70) return "Possible rain";
+  return "Rain likely";
+}
+
+function MetricCard({
+  kind,
+  title,
+  value,
+  sub,
+}: {
+  kind: MetricKind;
+  title: string;
+  value: string;
+  sub?: string;
+}) {
+  const tone = metricPalette[kind];
+  const intensity = metricIntensity(kind, value);
+  const stateText = metricLabel(kind, value);
+
+  const styleVars = {
+    "--metric-c1": tone.c1,
+    "--metric-c2": tone.c2,
+    "--metric-c3": tone.c3,
+    "--metric-opacity": String(0.42 + intensity / 190),
+    "--metric-speed": `${Math.max(10, 24 - intensity / 6)}s`,
+  } as CSSProperties;
+
   return (
-    <div className="rounded-2xl border bg-white p-5 shadow-sm">
-      <p className="text-sm font-semibold text-slate-600">{title}</p>
-      <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+    <div className={`metric-animated rounded-2xl border bg-white p-5 shadow-sm ${tone.border}`} style={styleVars}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-slate-700">{title}</p>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${tone.badge}`}>{stateText}</span>
+      </div>
+      <p className={`mt-2 text-3xl font-bold ${tone.value}`}>{value}</p>
       {sub ? <p className="mt-1 text-sm text-slate-500">{sub}</p> : null}
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-200/80">
+        <div
+          className={`h-full rounded-full bg-gradient-to-r ${tone.bar} transition-all duration-700`}
+          style={{ width: `${Math.max(8, Math.round(intensity))}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -240,7 +370,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="dashboard-atmosphere space-y-6">
         <div className="rounded-2xl border bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
@@ -309,14 +439,20 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card
+          <MetricCard
+            kind="moisture"
             title="Soil Moisture"
             value={moistureText}
             sub={sensorLatest?.createdAt ? `Last: ${fmtTime(sensorLatest.createdAt)}` : "Use Simulator to send data"}
           />
-          <Card title="Temperature" value={tempText} sub="Forecast (current)" />
-          <Card title="Humidity" value={humText} sub="Forecast (current)" />
-          <Card title="Rain Chance (Next Hour)" value={rainChanceText} sub={`Current precip: ${precipMmText}`} />
+          <MetricCard kind="temperature" title="Temperature" value={tempText} sub="Forecast (current)" />
+          <MetricCard kind="humidity" title="Humidity" value={humText} sub="Forecast (current)" />
+          <MetricCard
+            kind="rain"
+            title="Rain Chance (Next Hour)"
+            value={rainChanceText}
+            sub={`Current precip: ${precipMmText}`}
+          />
         </div>
 
         {/* Extreme alerts preview */}

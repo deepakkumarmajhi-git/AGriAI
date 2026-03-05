@@ -33,6 +33,7 @@ const features = [
     icon: Bot,
     accent: "from-sky-300/30 to-teal-300/10",
   },
+  
 ];
 
 export default function WithAIPage() {

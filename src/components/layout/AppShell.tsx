@@ -3,21 +3,132 @@
 import FarmerVoiceAssistant from "@/components/chat/FarmerVoiceAssistant";
 import { logout } from "@/lib/auth";
 import { AppLanguage, AppTheme, applyLanguage, applyTheme, loadLanguage, loadTheme, savePrefs, supportedLanguages } from "@/lib/preferences";
-import { Bell, Bot, CloudSun, Droplets, GripVertical, Home, Leaf, Menu, Moon, Sprout, Sun, UserRound, Waves, X } from "lucide-react";
+import { Store, Landmark, Bell, Bot, CloudSun, Droplets, GripVertical, Home, Leaf, Menu, Moon, PanelLeftClose, PanelLeftOpen, Sprout, Stethoscope, Sun, UserRound, Waves, X, Sparkle, Antenna } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+type NavTone =
+  | "emerald"
+  | "sky"
+  | "violet"
+  | "rose"
+  | "cyan"
+  | "amber"
+  | "lime"
+  | "indigo"
+  | "fuchsia";
+
 const topNavItems = [
-  { href: "/dashboard", label: "Dashboard", icon: Home },
-  { href: "/weather", label: "Weather", icon: CloudSun },
-  { href: "/with-ai", label: "With AI", icon: Bot },
-  { href: "/irrigation", label: "Irrigation", icon: Droplets },
-  { href: "/marketplace", label: "Marketplace", icon: Waves },
-  { href: "/waste-management", label: "Waste Mgmt", icon: Sprout },
-  { href: "/schemes", label: "Schemes", icon: Home },
-  {href: "/simulate", label: "simulator", icon: UserRound },
+  { href: "/dashboard", label: "Dashboard", icon: Home, tone: "emerald" as NavTone },
+  { href: "/weather", label: "Weather", icon: CloudSun, tone: "sky" as NavTone },
+  { href: "/with-ai", label: "With AI", icon: Sparkle, tone: "violet" as NavTone },
+  { href: "/agro-doctor", label: "Agro Doctor", icon: Stethoscope, tone: "rose" as NavTone },
+  { href: "/irrigation", label: "Irrigation", icon: Droplets, tone: "cyan" as NavTone },
+  { href: "/marketplace", label: "Marketplace Mgmt", icon: Store, tone: "amber" as NavTone },
+  { href: "/waste-management", label: "Waste Mgmt", icon: Sprout, tone: "lime" as NavTone },
+  { href: "/schemes", label: "Schemes", icon: Landmark, tone: "indigo" as NavTone },
+  { href: "/simulate", label: "Simulators", icon: Antenna, tone: "fuchsia" as NavTone },
 ];
+
+const navToneClasses: Record<
+  NavTone,
+  {
+    dark: { active: string; idle: string };
+    light: { active: string; idle: string };
+  }
+> = {
+  emerald: {
+    dark: {
+      active: "bg-emerald-500/18 text-emerald-200 ring-1 ring-emerald-300/30 shadow-[0_0_16px_rgba(52,211,153,0.18)]",
+      idle: "text-slate-200 hover:bg-emerald-500/12 hover:text-emerald-200",
+    },
+    light: {
+      active: "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200",
+      idle: "text-slate-700 hover:bg-emerald-50 hover:text-emerald-700",
+    },
+  },
+  sky: {
+    dark: {
+      active: "bg-sky-500/18 text-sky-200 ring-1 ring-sky-300/30 shadow-[0_0_16px_rgba(56,189,248,0.2)]",
+      idle: "text-slate-200 hover:bg-sky-500/12 hover:text-sky-200",
+    },
+    light: {
+      active: "bg-sky-100 text-sky-700 ring-1 ring-sky-200",
+      idle: "text-slate-700 hover:bg-sky-50 hover:text-sky-700",
+    },
+  },
+  violet: {
+    dark: {
+      active: "bg-violet-500/18 text-violet-200 ring-1 ring-violet-300/30 shadow-[0_0_16px_rgba(167,139,250,0.2)]",
+      idle: "text-slate-200 hover:bg-violet-500/12 hover:text-violet-200",
+    },
+    light: {
+      active: "bg-violet-100 text-violet-700 ring-1 ring-violet-200",
+      idle: "text-slate-700 hover:bg-violet-50 hover:text-violet-700",
+    },
+  },
+  rose: {
+    dark: {
+      active: "bg-rose-500/18 text-rose-200 ring-1 ring-rose-300/30 shadow-[0_0_16px_rgba(251,113,133,0.2)]",
+      idle: "text-slate-200 hover:bg-rose-500/12 hover:text-rose-200",
+    },
+    light: {
+      active: "bg-rose-100 text-rose-700 ring-1 ring-rose-200",
+      idle: "text-slate-700 hover:bg-rose-50 hover:text-rose-700",
+    },
+  },
+  cyan: {
+    dark: {
+      active: "bg-cyan-500/18 text-cyan-200 ring-1 ring-cyan-300/30 shadow-[0_0_16px_rgba(34,211,238,0.2)]",
+      idle: "text-slate-200 hover:bg-cyan-500/12 hover:text-cyan-200",
+    },
+    light: {
+      active: "bg-cyan-100 text-cyan-700 ring-1 ring-cyan-200",
+      idle: "text-slate-700 hover:bg-cyan-50 hover:text-cyan-700",
+    },
+  },
+  amber: {
+    dark: {
+      active: "bg-amber-500/18 text-amber-200 ring-1 ring-amber-300/30 shadow-[0_0_16px_rgba(251,191,36,0.2)]",
+      idle: "text-slate-200 hover:bg-amber-500/12 hover:text-amber-200",
+    },
+    light: {
+      active: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
+      idle: "text-slate-700 hover:bg-amber-50 hover:text-amber-700",
+    },
+  },
+  lime: {
+    dark: {
+      active: "bg-lime-500/18 text-lime-200 ring-1 ring-lime-300/30 shadow-[0_0_16px_rgba(163,230,53,0.2)]",
+      idle: "text-slate-200 hover:bg-lime-500/12 hover:text-lime-200",
+    },
+    light: {
+      active: "bg-lime-100 text-lime-700 ring-1 ring-lime-200",
+      idle: "text-slate-700 hover:bg-lime-50 hover:text-lime-700",
+    },
+  },
+  indigo: {
+    dark: {
+      active: "bg-indigo-500/18 text-indigo-200 ring-1 ring-indigo-300/30 shadow-[0_0_16px_rgba(129,140,248,0.2)]",
+      idle: "text-slate-200 hover:bg-indigo-500/12 hover:text-indigo-200",
+    },
+    light: {
+      active: "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200",
+      idle: "text-slate-700 hover:bg-indigo-50 hover:text-indigo-700",
+    },
+  },
+  fuchsia: {
+    dark: {
+      active: "bg-fuchsia-500/18 text-fuchsia-200 ring-1 ring-fuchsia-300/30 shadow-[0_0_16px_rgba(232,121,249,0.2)]",
+      idle: "text-slate-200 hover:bg-fuchsia-500/12 hover:text-fuchsia-200",
+    },
+    light: {
+      active: "bg-fuchsia-100 text-fuchsia-700 ring-1 ring-fuchsia-200",
+      idle: "text-slate-700 hover:bg-fuchsia-50 hover:text-fuchsia-700",
+    },
+  },
+};
 
 type ScanHeadline = {
   id: string;
@@ -34,6 +145,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [scanHistory, setScanHistory] = useState<ScanHeadline[]>([]);
   const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [profileImage, setProfileImage] = useState<string>("");
   const [theme, setTheme] = useState<AppTheme>("dark");
@@ -50,7 +162,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem("smartAgriProfileImage") || "";
+    const savedSidebarCollapsed = localStorage.getItem("smartAgriSidebarCollapsed") === "true";
     setProfileImage(saved);
+    setSidebarCollapsed(savedSidebarCollapsed);
     setTheme(loadTheme());
     setLanguage(loadLanguage());
   }, []);
@@ -169,6 +283,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     savePrefs(theme, next);
   }
 
+  function onToggleSidebarCollapse() {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("smartAgriSidebarCollapsed", String(next));
+      return next;
+    });
+  }
+
   const headerThemeClass =
     theme === "light"
       ? "border-slate-200 bg-white/90"
@@ -196,6 +318,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 aria-label="Toggle menu"
               >
                 {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+              <button
+                onClick={onToggleSidebarCollapse}
+                className={`hidden rounded-lg border p-2 md:inline-flex ${topButtonClass}`}
+                aria-label={sidebarCollapsed ? "Expand scan history sidebar" : "Collapse scan history sidebar"}
+                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
               </button>
 
               <Link href="/dashboard" className="group flex items-center gap-2">
@@ -337,15 +467,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {topNavItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               const Icon = item.icon;
+              const toneSet = navToneClasses[item.tone][theme === "light" ? "light" : "dark"];
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={[
-                    "inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold",
-                    active
-                      ? "bg-emerald-400/15 text-emerald-200 ring-1 ring-emerald-300/25"
-                      : "text-slate-200 hover:bg-emerald-400/10 hover:text-emerald-100",
+                    "inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5",
+                    active ? toneSet.active : toneSet.idle,
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -360,7 +489,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div ref={layoutRef} className="mx-auto flex w-full max-w-7xl flex-1 overflow-hidden px-4 py-4">
         <aside
           style={{ width: sidebarWidth }}
-          className={["shrink-0 overflow-hidden", mobileNavOpen ? "block" : "hidden md:block"].join(" ")}
+          className={[
+            "shrink-0 overflow-hidden",
+            mobileNavOpen ? "block" : sidebarCollapsed ? "hidden" : "hidden md:block",
+          ].join(" ")}
         >
           <div className="h-full overflow-y-auto overscroll-contain no-scrollbar rounded-2xl border bg-white p-3 shadow-sm">
             <div className="px-2 pb-2">
@@ -391,7 +523,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         <div
           onMouseDown={() => setIsResizing(true)}
-          className="mx-1 hidden w-2 cursor-col-resize items-center justify-center rounded-md bg-white/5 text-slate-500 hover:bg-emerald-400/15 md:flex"
+          className={[
+            "mx-1 hidden w-2 cursor-col-resize items-center justify-center rounded-md bg-white/5 text-slate-500 hover:bg-emerald-400/15 md:flex",
+            sidebarCollapsed ? "md:hidden" : "",
+          ].join(" ")}
           title="Resize sidebar"
           aria-hidden
         >

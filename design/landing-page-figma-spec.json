@@ -1,0 +1,127 @@
+{
+  "project": "SmartAgri MVP",
+  "page": "Landing Page",
+  "sourceCodePath": "src/app/page.tsx",
+  "breakpoints": {
+    "desktop": 1440,
+    "tablet": 1024,
+    "mobile": 390
+  },
+  "designTokens": {
+    "fonts": {
+      "primary": "Manrope",
+      "display": "Space Grotesk"
+    },
+    "colors": {
+      "bgBase": "#04070f",
+      "surface": "rgba(255,255,255,0.05)",
+      "surfaceStrong": "rgba(255,255,255,0.09)",
+      "border": "rgba(255,255,255,0.12)",
+      "textPrimary": "#eef5ff",
+      "textSecondary": "#c2cfde",
+      "textMuted": "#93a4b8",
+      "brandGreen": "#33d17a",
+      "brandTeal": "#35d4c0",
+      "accentCyan": "#67e8f9"
+    },
+    "radius": {
+      "container": 24,
+      "card": 16,
+      "pill": 999
+    },
+    "spacingScale": [4, 8, 12, 16, 20, 24, 32, 40, 56]
+  },
+  "layout": {
+    "containerMaxWidth": 1280,
+    "desktopGrid": {
+      "columns": 12,
+      "margin": 72,
+      "gutter": 24
+    },
+    "tabletGrid": {
+      "columns": 8,
+      "margin": 40,
+      "gutter": 20
+    },
+    "mobileGrid": {
+      "columns": 4,
+      "margin": 20,
+      "gutter": 16
+    }
+  },
+  "sections": [
+    {
+      "id": "header",
+      "title": "Top Navigation",
+      "components": ["BrandBlock", "ButtonSecondary(Login)", "ButtonPrimary(Get Started)"]
+    },
+    {
+      "id": "hero",
+      "title": "Hero",
+      "components": [
+        "Badge",
+        "HeroHeading",
+        "HeroBody",
+        "ButtonPrimary(Create Free Account)",
+        "ButtonSecondary(Open Demo Dashboard)",
+        "ControlCenterSnapshotCard"
+      ]
+    },
+    {
+      "id": "trustStrip",
+      "title": "Trust Strip",
+      "components": ["TrustCard x4"]
+    },
+    {
+      "id": "capabilities",
+      "title": "Platform Capabilities",
+      "components": ["SectionHeader", "FeatureCard x6"]
+    },
+    {
+      "id": "howItWorks",
+      "title": "How It Works + Built For Scale",
+      "components": ["StepCard x4", "AudienceCard x3", "ButtonSecondary x2"]
+    },
+    {
+      "id": "finalCta",
+      "title": "Final CTA",
+      "components": ["GradientPanel", "ButtonPrimary(Create Account)", "ButtonSecondary(Sign In)"]
+    }
+  ],
+  "featureCards": [
+    "Live Crop Insights",
+    "Leaf Disease Scan",
+    "Smart Irrigation",
+    "Voice Assistant",
+    "Produce Marketplace",
+    "Waste Exchange"
+  ],
+  "mappingToCode": [
+    {
+      "section": "header",
+      "path": "src/app/page.tsx",
+      "anchor": "header className=\"rounded-3xl border border-white/10 bg-white/5\""
+    },
+    {
+      "section": "hero",
+      "path": "src/app/page.tsx",
+      "anchor": "section className=\"relative mt-6 overflow-hidden rounded-3xl\""
+    },
+    {
+      "section": "capabilities",
+      "path": "src/app/page.tsx",
+      "anchor": "section className=\"mt-6 rounded-3xl border border-white/10\""
+    },
+    {
+      "section": "howItWorks",
+      "path": "src/app/page.tsx",
+      "anchor": "section className=\"mt-6 grid gap-4 lg:grid-cols-[1fr_1fr]\""
+    },
+    {
+      "section": "finalCta",
+      "path": "src/app/page.tsx",
+      "anchor": "section className=\"mt-6 rounded-3xl border border-emerald-300/25\""
+    }
+  ]
+}
+

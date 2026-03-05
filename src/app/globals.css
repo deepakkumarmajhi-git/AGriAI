@@ -450,6 +450,54 @@ html:not([data-theme="light"]) .agri-root .text-green-700 {
   background: linear-gradient(180deg, rgba(52, 211, 153, 0.18), transparent);
 }
 
+.metric-animated {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.metric-animated::before {
+  content: "";
+  position: absolute;
+  inset: -55%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 28%, var(--metric-c1, rgba(56, 189, 248, 0.22)), transparent 42%),
+    radial-gradient(circle at 82% 24%, var(--metric-c2, rgba(14, 165, 233, 0.16)), transparent 44%),
+    radial-gradient(circle at 50% 84%, var(--metric-c3, rgba(59, 130, 246, 0.14)), transparent 47%);
+  opacity: var(--metric-opacity, 0.65);
+  animation: weatherFlow var(--metric-speed, 18s) linear infinite;
+  z-index: 0;
+}
+
+.metric-animated::after {
+  content: "";
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  top: -50%;
+  bottom: 50%;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), transparent 72%);
+  animation: metricSweep 8.5s ease-in-out infinite;
+  z-index: 0;
+}
+
+.metric-animated > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes metricSweep {
+  0%,
+  100% {
+    transform: translateY(-10%) scaleX(1);
+  }
+  50% {
+    transform: translateY(8%) scaleX(1.08);
+  }
+}
+
 @keyframes weatherFlow {
   0% {
     transform: translate3d(-2%, -1%, 0) rotate(0deg);
