@@ -2,8 +2,10 @@
 
 import AppShell from "@/components/layout/AppShell";
 import { requireAuthOrRedirect } from "@/lib/auth";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+export const dynamic = "force-dynamic";
 
 type Result = {
   disease: string;
@@ -24,9 +26,10 @@ type LiveLog = {
 };
 
 export default function ScanPage() {
-  const searchParams = useSearchParams();
-  const farmPlanId = searchParams.get("farmPlanId");
   const router = useRouter();
+
+  const [mounted, setMounted] = useState(false);
+  const [farmPlanId, setFarmPlanId] = useState<string | null>(null);
 
   const [mode, setMode] = useState<Mode>("upload");
 
@@ -42,19 +45,30 @@ export default function ScanPage() {
 
   // Live auto scan
   const [autoScan, setAutoScan] = useState(false);
-  const [intervalMs, setIntervalMs] = useState(2000); // 2s default
-  const [maxPerMin, setMaxPerMin] = useState(12); // safety: 12 req/min (1 req/5s avg)
+  const [intervalMs, setIntervalMs] = useState(2000);
+  const [maxPerMin, setMaxPerMin] = useState(12);
   const lastRequestTimesRef = useRef<number[]>([]);
   const inFlightRef = useRef(false);
-  const timerRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [liveLog, setLiveLog] = useState<LiveLog[]>([]);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     requireAuthOrRedirect(router.push);
-  }, [router]);
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      setFarmPlanId(params.get("farmPlanId"));
+    }
+  }, [mounted, router]);
 
   // Preview for chosen file/captured image
   useEffect(() => {
@@ -62,9 +76,13 @@ export default function ScanPage() {
       setPreviewUrl(null);
       return;
     }
+
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
   }, [file]);
 
   // Cleanup on unmount
@@ -73,7 +91,6 @@ export default function ScanPage() {
       stopAutoScan();
       stopCamera();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function startCamera() {
@@ -81,6 +98,16 @@ export default function ScanPage() {
     setCameraReady(false);
 
     try {
+      if (typeof window === "undefined" || typeof navigator === "undefined") {
+        setCameraError("Camera is only available in the browser.");
+        return;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError("Camera API is not supported in this browser.");
+        return;
+      }
+
       stopCamera();
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -106,8 +133,15 @@ export default function ScanPage() {
 
   function stopCamera() {
     const stream = streamRef.current;
-    if (stream) stream.getTracks().forEach((t) => t.stop());
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+    }
     streamRef.current = null;
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
     setCameraReady(false);
   }
 
@@ -132,11 +166,16 @@ export default function ScanPage() {
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
-    while (n--) u8arr[n] = bstr.charCodeAt(n);
+
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+
     return new File([u8arr], filename, { type: mime });
   }
 
   function captureFrameToFile(): File | null {
+    if (typeof document === "undefined") return null;
     if (!videoRef.current) return null;
 
     const video = videoRef.current;
@@ -157,17 +196,21 @@ export default function ScanPage() {
 
   async function captureOnce() {
     const captured = captureFrameToFile();
+
     if (!captured) {
-      alert("Camera not ready. Please try again.");
+      if (typeof window !== "undefined") {
+        window.alert("Camera not ready. Please try again.");
+      }
       return;
     }
+
     setFile(captured);
     setResult(null);
   }
 
-  // ✅ Link scan to Farm AI plan (only if scanId exists in response)
   async function linkScanToFarmPlan(scanResp: any) {
     if (!farmPlanId) return;
+    if (typeof window === "undefined") return;
 
     const userId = localStorage.getItem("smartAgriUserId");
     if (!userId) return;
@@ -200,7 +243,6 @@ export default function ScanPage() {
 
   function canSendNow() {
     const now = Date.now();
-    // keep only last minute
     lastRequestTimesRef.current = lastRequestTimesRef.current.filter(
       (t) => now - t < 60_000
     );
@@ -212,14 +254,15 @@ export default function ScanPage() {
   }
 
   async function predictWithFile(f: File, isLive: boolean) {
+    if (typeof window === "undefined") return;
+
     const userId = localStorage.getItem("smartAgriUserId");
     if (!userId) {
-      alert("UserId missing. Please login again.");
+      window.alert("UserId missing. Please login again.");
       router.push("/auth/login");
       return;
     }
 
-    // Rate limit + no concurrent in-flight requests
     if (inFlightRef.current) return;
     if (!canSendNow()) return;
 
@@ -240,11 +283,12 @@ export default function ScanPage() {
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data?.error || "Prediction failed");
+      if (!res.ok) {
+        throw new Error(data?.error || "Prediction failed");
+      }
 
       setResult(data.result);
 
-      // log for live mode
       if (isLive && data?.result) {
         setLiveLog((prev) => {
           const entry: LiveLog = {
@@ -258,10 +302,11 @@ export default function ScanPage() {
 
       await linkScanToFarmPlan(data);
 
-      // update alerts badge
       window.dispatchEvent(new Event("smartagri:alerts-updated"));
     } catch (e: any) {
-      if (!isLive) alert(e?.message || "Something went wrong");
+      if (!isLive) {
+        window.alert(e?.message || "Something went wrong");
+      }
     } finally {
       inFlightRef.current = false;
       if (!isLive) setLoading(false);
@@ -269,56 +314,64 @@ export default function ScanPage() {
   }
 
   async function onDetect() {
-    if (!file) return alert("Please upload or capture a leaf image first.");
+    if (!file) {
+      if (typeof window !== "undefined") {
+        window.alert("Please upload or capture a leaf image first.");
+      }
+      return;
+    }
+
     await predictWithFile(file, false);
   }
 
   function startAutoScan() {
     if (!cameraReady) {
-      alert("Camera not ready. Start camera first.");
+      if (typeof window !== "undefined") {
+        window.alert("Camera not ready. Start camera first.");
+      }
       return;
     }
+
     if (timerRef.current) return;
 
     setAutoScan(true);
 
-    // immediate fire once
-    (async () => {
+    void (async () => {
       const f = captureFrameToFile();
       if (f) {
-        // optional: also update preview image while live running
         setFile(f);
         await predictWithFile(f, true);
       }
     })();
 
-    timerRef.current = setInterval(async () => {
-      const f = captureFrameToFile();
-      if (!f) return;
+    timerRef.current = setInterval(() => {
+      void (async () => {
+        const f = captureFrameToFile();
+        if (!f) return;
 
-      // keep preview updated for user confidence
-      setFile(f);
-
-      await predictWithFile(f, true);
+        setFile(f);
+        await predictWithFile(f, true);
+      })();
     }, intervalMs);
   }
 
   function stopAutoScan() {
     setAutoScan(false);
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+
     inFlightRef.current = false;
     lastRequestTimesRef.current = [];
   }
 
-  // If user changes interval while running, restart interval
   useEffect(() => {
     if (!autoScan) return;
+
     stopAutoScan();
     startAutoScan();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intervalMs, maxPerMin]);
 
   const tip = useMemo(() => {
@@ -336,22 +389,38 @@ export default function ScanPage() {
     return Math.max(0, maxPerMin - arr.length);
   }, [maxPerMin, autoScan, loading, result, liveLog.length]);
 
+  if (!mounted) {
+    return (
+      <AppShell>
+        <div className="min-h-[calc(100vh-80px)] bg-slate-50">
+          <div className="mx-auto max-w-6xl px-4 py-6">
+            <div className="rounded-2xl border bg-white p-6 shadow-sm">
+              <h1 className="text-2xl font-bold text-slate-900">Scan Leaf</h1>
+              <p className="mt-2 text-slate-600">Loading scanner...</p>
+            </div>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="min-h-[calc(100vh-80px)] bg-slate-50">
         <div className="mx-auto max-w-6xl px-4 py-6 space-y-6">
-          {/* Header */}
           <div className="rounded-2xl border bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900">Scan Leaf</h1>
                 <p className="mt-1 text-slate-600">
-                  Upload or capture a leaf photo. The API stores scan in MongoDB and returns prediction.
+                  Upload or capture a leaf photo. The API stores scan in MongoDB
+                  and returns prediction.
                 </p>
 
                 {farmPlanId && (
                   <div className="mt-3 inline-flex rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
-                    Linked to Farm AI Plan: <span className="ml-2 font-mono">{farmPlanId}</span>
+                    Linked to Farm AI Plan:
+                    <span className="ml-2 font-mono">{farmPlanId}</span>
                   </div>
                 )}
               </div>
@@ -362,10 +431,9 @@ export default function ScanPage() {
               </div>
             </div>
 
-            {/* Mode Tabs */}
             <div className="mt-5 flex flex-wrap gap-2">
               <button
-                onClick={() => switchMode("upload")}
+                onClick={() => void switchMode("upload")}
                 className={`rounded-xl px-4 py-2 text-sm font-semibold border ${
                   mode === "upload"
                     ? "bg-slate-900 text-white border-slate-900"
@@ -375,7 +443,7 @@ export default function ScanPage() {
                 Upload Image
               </button>
               <button
-                onClick={() => switchMode("camera")}
+                onClick={() => void switchMode("camera")}
                 className={`rounded-xl px-4 py-2 text-sm font-semibold border ${
                   mode === "camera"
                     ? "bg-slate-900 text-white border-slate-900"
@@ -388,7 +456,6 @@ export default function ScanPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            {/* Left: Input */}
             <div className="rounded-2xl border bg-white p-6 shadow-sm">
               {mode === "upload" ? (
                 <>
@@ -406,11 +473,13 @@ export default function ScanPage() {
               ) : (
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-lg font-bold text-slate-900">Live Camera</h2>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Live Camera
+                    </h2>
 
                     <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={startCamera}
+                        onClick={() => void startCamera()}
                         className="rounded-xl border bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
                       >
                         Restart
@@ -445,10 +514,9 @@ export default function ScanPage() {
                     />
                   </div>
 
-                  {/* Controls */}
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <button
-                      onClick={captureOnce}
+                      onClick={() => void captureOnce()}
                       disabled={!cameraReady}
                       className="w-full rounded-xl border bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
                     >
@@ -473,12 +541,15 @@ export default function ScanPage() {
                     )}
                   </div>
 
-                  {/* Live Settings */}
                   <div className="mt-4 rounded-2xl border bg-slate-50 p-4">
-                    <div className="text-sm font-bold text-slate-900">Auto Scan Settings</div>
+                    <div className="text-sm font-bold text-slate-900">
+                      Auto Scan Settings
+                    </div>
                     <div className="mt-2 grid gap-3 md:grid-cols-2">
                       <div>
-                        <div className="text-xs font-semibold text-slate-600">Interval</div>
+                        <div className="text-xs font-semibold text-slate-600">
+                          Interval
+                        </div>
                         <select
                           value={intervalMs}
                           onChange={(e) => setIntervalMs(Number(e.target.value))}
@@ -492,7 +563,9 @@ export default function ScanPage() {
                       </div>
 
                       <div>
-                        <div className="text-xs font-semibold text-slate-600">Max requests / min</div>
+                        <div className="text-xs font-semibold text-slate-600">
+                          Max requests / min
+                        </div>
                         <select
                           value={maxPerMin}
                           onChange={(e) => setMaxPerMin(Number(e.target.value))}
@@ -506,17 +579,15 @@ export default function ScanPage() {
                     </div>
 
                     <div className="mt-3 text-xs text-slate-600">
-                      Remaining this minute: <b>{remainingThisMinute}</b> • Auto Scan:{" "}
-                      <b>{autoScan ? "ON" : "OFF"}</b>
+                      Remaining this minute: <b>{remainingThisMinute}</b> • Auto
+                      Scan: <b>{autoScan ? "ON" : "OFF"}</b>
                     </div>
                   </div>
                 </>
               )}
 
-              {/* Preview */}
               <div className="mt-4 rounded-xl border border-dashed bg-slate-50 p-4">
                 {previewUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={previewUrl}
                     alt="preview"
@@ -531,9 +602,8 @@ export default function ScanPage() {
                 )}
               </div>
 
-              {/* Manual detect button still available */}
               <button
-                onClick={onDetect}
+                onClick={() => void onDetect()}
                 disabled={loading}
                 className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-2.5 font-semibold text-white hover:bg-black disabled:opacity-60"
               >
@@ -541,12 +611,17 @@ export default function ScanPage() {
               </button>
             </div>
 
-            {/* Right: Result */}
             <div className="rounded-2xl border bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-lg font-bold text-slate-900">Result</h2>
                 {mode === "camera" && (
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${autoScan ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-700"}`}>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      autoScan
+                        ? "bg-green-50 text-green-700"
+                        : "bg-slate-100 text-slate-700"
+                    }`}
+                  >
                     Auto Scan: {autoScan ? "Running" : "Paused"}
                   </span>
                 )}
@@ -561,44 +636,69 @@ export default function ScanPage() {
               ) : (
                 <div className="mt-4 space-y-3">
                   <div className="rounded-xl border p-4">
-                    <p className="text-sm font-semibold text-slate-600">Prediction</p>
-                    <p className="mt-1 text-2xl font-bold text-slate-900">{result.disease}</p>
+                    <p className="text-sm font-semibold text-slate-600">
+                      Prediction
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900">
+                      {result.disease}
+                    </p>
                   </div>
 
                   <div className="rounded-xl border p-4">
-                    <p className="text-sm font-semibold text-slate-600">Confidence</p>
+                    <p className="text-sm font-semibold text-slate-600">
+                      Confidence
+                    </p>
                     <p className="mt-1 text-xl font-bold text-slate-900">
                       {(result.confidence * 100).toFixed(0)}%
                     </p>
                   </div>
 
                   <div className="rounded-xl border p-4">
-                    <p className="text-sm font-semibold text-slate-600">Reason for Disease</p>
-                    <p className="mt-1 text-slate-700">{result.reason || "No reason available."}</p>
-                  </div>
-
-                  <div className="rounded-xl border p-4">
-                    <p className="text-sm font-semibold text-slate-600">Organic Treatment (Zero/Low Cost)</p>
+                    <p className="text-sm font-semibold text-slate-600">
+                      Reason for Disease
+                    </p>
                     <p className="mt-1 text-slate-700">
-                      {result.organicTreatment || "No organic treatment available."}
+                      {result.reason || "No reason available."}
                     </p>
                   </div>
 
                   <div className="rounded-xl border p-4">
-                    <p className="text-sm font-semibold text-slate-600">Artificial Treatment (Chemical)</p>
+                    <p className="text-sm font-semibold text-slate-600">
+                      Organic Treatment (Zero/Low Cost)
+                    </p>
                     <p className="mt-1 text-slate-700">
-                      {result.artificialTreatment || "No artificial treatment available."}
+                      {result.organicTreatment ||
+                        "No organic treatment available."}
                     </p>
                   </div>
 
                   <div className="rounded-xl border p-4">
-                    <p className="text-sm font-semibold text-slate-600">Prevention and Follow-up</p>
-                    <p className="mt-1 text-slate-700">{result.prevention || "No prevention guidance available."}</p>
+                    <p className="text-sm font-semibold text-slate-600">
+                      Artificial Treatment (Chemical)
+                    </p>
+                    <p className="mt-1 text-slate-700">
+                      {result.artificialTreatment ||
+                        "No artificial treatment available."}
+                    </p>
                   </div>
 
                   <div className="rounded-xl border p-4">
-                    <p className="text-sm font-semibold text-slate-600">Recommendation</p>
-                    <p className="mt-1 text-slate-700">{result.recommendation}</p>
+                    <p className="text-sm font-semibold text-slate-600">
+                      Prevention and Follow-up
+                    </p>
+                    <p className="mt-1 text-slate-700">
+                      {result.prevention ||
+                        "No prevention guidance available."}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border p-4">
+                    <p className="text-sm font-semibold text-slate-600">
+                      Recommendation
+                    </p>
+                    <p className="mt-1 text-slate-700">
+                      {result.recommendation}
+                    </p>
                   </div>
 
                   <p className="text-xs text-slate-500">
@@ -607,10 +707,12 @@ export default function ScanPage() {
                 </div>
               )}
 
-              {/* Live log */}
               {mode === "camera" && (
                 <div className="mt-6">
-                  <div className="text-sm font-bold text-slate-900">Live Scan Log</div>
+                  <div className="text-sm font-bold text-slate-900">
+                    Live Scan Log
+                  </div>
+
                   {liveLog.length === 0 ? (
                     <div className="mt-2 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
                       No live detections yet.
@@ -620,7 +722,9 @@ export default function ScanPage() {
                       {liveLog.map((l, idx) => (
                         <div key={idx} className="rounded-xl border bg-white p-3">
                           <div className="flex items-center justify-between gap-2">
-                            <div className="text-sm font-semibold text-slate-900">{l.disease}</div>
+                            <div className="text-sm font-semibold text-slate-900">
+                              {l.disease}
+                            </div>
                             <div className="text-xs text-slate-600">{l.at}</div>
                           </div>
                           <div className="mt-1 text-xs text-slate-600">
@@ -642,10 +746,10 @@ export default function ScanPage() {
             </div>
           </div>
 
-          {/* Footnote */}
           <div className="rounded-2xl border bg-white p-4 shadow-sm text-xs text-slate-600">
-            Live Auto Scan is rate-limited to protect your server. For best results, keep the leaf steady,
-            use bright natural light, and avoid motion blur.
+            Live Auto Scan is rate-limited to protect your server. For best
+            results, keep the leaf steady, use bright natural light, and avoid
+            motion blur.
           </div>
         </div>
       </div>
