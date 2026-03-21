@@ -24,6 +24,7 @@ export default function FarmerVoiceAssistant() {
   const chunksRef = useRef<Blob[]>([]);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const conversationRef = useRef<ChatMsg[]>([]);
+  const playbackTokenRef = useRef(0);
 
   const selectedLanguage = useMemo(
     () => VOICE_LANGUAGES.find((l) => l.code === selectedLangCode) || null,
@@ -39,6 +40,7 @@ export default function FarmerVoiceAssistant() {
 
   useEffect(() => {
     return () => {
+      playbackTokenRef.current += 1;
       try {
         mediaRecorderRef.current?.stop();
       } catch {
@@ -53,6 +55,30 @@ export default function FarmerVoiceAssistant() {
     };
   }, []);
 
+  useEffect(() => {
+    if (voiceOut) return;
+    playbackTokenRef.current += 1;
+    currentAudioRef.current?.pause();
+    currentAudioRef.current = null;
+  }, [voiceOut]);
+
+  async function playAudioSequence(chunks: string[], mimeType: string, playbackToken: number) {
+    for (const chunk of chunks) {
+      if (playbackToken !== playbackTokenRef.current) return false;
+
+      const audio = new Audio(`data:${mimeType};base64,${chunk}`);
+      currentAudioRef.current = audio;
+
+      await new Promise<void>((resolve, reject) => {
+        audio.onended = () => resolve();
+        audio.onerror = () => reject(new Error("Audio playback failed"));
+        audio.play().then(() => undefined).catch(reject);
+      });
+    }
+
+    return playbackToken === playbackTokenRef.current;
+  }
+
   async function speak(text: string, languageCode: string) {
     if (!voiceOut) return;
     const t = text.trim();
@@ -63,20 +89,31 @@ export default function FarmerVoiceAssistant() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: t.slice(0, 1800),
+          text: t,
           target_language_code: languageCode,
         }),
       });
       const data = await res.json();
-      if (!res.ok || !data?.audioBase64) {
+      const chunks = Array.isArray(data?.audioBase64Chunks)
+        ? data.audioBase64Chunks.filter((chunk: unknown): chunk is string => typeof chunk === "string" && chunk.length > 0)
+        : typeof data?.audioBase64 === "string" && data.audioBase64
+        ? [data.audioBase64]
+        : [];
+
+      if (!res.ok || !chunks.length) {
         setStatusText("Voice output failed. Tap mic and try again.");
         return;
       }
+
+      const playbackToken = playbackTokenRef.current + 1;
+      playbackTokenRef.current = playbackToken;
       currentAudioRef.current?.pause();
-      const audio = new Audio(`data:${data.mimeType || "audio/wav"};base64,${data.audioBase64}`);
-      currentAudioRef.current = audio;
-      audio.onended = () => setStatusText("Tap mic to ask next question.");
-      await audio.play();
+      currentAudioRef.current = null;
+
+      const completed = await playAudioSequence(chunks, data.mimeType || "audio/wav", playbackToken);
+      if (completed) {
+        setStatusText("Tap mic to ask next question.");
+      }
     } catch {
       setStatusText("Voice output failed. Tap mic and try again.");
     }

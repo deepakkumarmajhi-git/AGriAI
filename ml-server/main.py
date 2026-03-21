@@ -11,7 +11,6 @@ import joblib
 from pydantic import BaseModel
 
 # ✅ TensorFlow for .h5
-import tensorflow as tf
 import json
 import traceback
 
@@ -110,6 +109,16 @@ LEAF_LABELS_PATH = MODEL_DIR / "leaf_labels.json"
 
 _leaf_model = None
 _leaf_labels = None
+_tf = None
+
+
+def _get_tensorflow():
+    global _tf
+    if _tf is None:
+        import tensorflow as tf
+
+        _tf = tf
+    return _tf
 
 def _load_leaf_assets():
     global _leaf_model, _leaf_labels
@@ -125,6 +134,7 @@ def _load_leaf_assets():
     if _leaf_model is None:
         if not LEAF_MODEL_PATH.exists():
             raise FileNotFoundError(f"Missing model: {LEAF_MODEL_PATH}")
+        tf = _get_tensorflow()
         _leaf_model = tf.keras.models.load_model(str(LEAF_MODEL_PATH))
 
 def _leaf_input_size() -> int:
