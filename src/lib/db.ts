@@ -1,30 +1,34 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI as string;
-
-if (!MONGODB_URI) {
-  throw new Error("Missing MONGODB_URI in .env.local");
-}
-
-// Prevent multiple connections in dev (hot reload)
 declare global {
-  // eslint-disable-next-line no-var
-  var mongooseConn: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null };
+  var mongooseConn:
+    | {
+        conn: typeof mongoose | null;
+        promise: Promise<typeof mongoose> | null;
+      }
+    | undefined;
 }
 
-global.mongooseConn = global.mongooseConn || { conn: null, promise: null };
+const mongooseCache = globalThis.mongooseConn ?? { conn: null, promise: null };
+globalThis.mongooseConn = mongooseCache;
 
-export async function connectDB() {
-  if (global.mongooseConn.conn) return global.mongooseConn.conn;
+function getMongoUri() {
+  const uri = process.env.MONGODB_URI?.trim();
 
-  if (!global.mongooseConn.promise) {
-    global.mongooseConn.promise = mongoose
-      .connect(MONGODB_URI, {
-        dbName: undefined, // if your URI already includes db name
-      })
-      .then((mongoose) => mongoose);
+  if (!uri) {
+    throw new Error("Missing MONGODB_URI in the server environment");
   }
 
-  global.mongooseConn.conn = await global.mongooseConn.promise;
-  return global.mongooseConn.conn;
+  return uri;
+}
+
+export async function connectDB() {
+  if (mongooseCache.conn) return mongooseCache.conn;
+
+  if (!mongooseCache.promise) {
+    mongooseCache.promise = mongoose.connect(getMongoUri()).then((connection) => connection);
+  }
+
+  mongooseCache.conn = await mongooseCache.promise;
+  return mongooseCache.conn;
 }

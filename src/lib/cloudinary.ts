@@ -1,23 +1,33 @@
 import { v2 as cloudinary } from "cloudinary";
 
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME as string;
-const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY as string;
-const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET as string;
+let isCloudinaryConfigured = false;
 
-if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
-  throw new Error("Missing Cloudinary env vars in .env.local");
+function configureCloudinary() {
+  if (isCloudinaryConfigured) return;
+
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+  const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+  const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error("Missing Cloudinary credentials in the server environment");
+  }
+
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+  });
+
+  isCloudinaryConfigured = true;
 }
-
-cloudinary.config({
-  cloud_name: CLOUDINARY_CLOUD_NAME,
-  api_key: CLOUDINARY_API_KEY,
-  api_secret: CLOUDINARY_API_SECRET,
-});
 
 export async function uploadImageBuffer(
   buffer: Buffer,
   opts?: { folder?: string; public_id?: string }
 ): Promise<{ secure_url: string; public_id: string }> {
+  configureCloudinary();
+
   const folder = opts?.folder || process.env.CLOUDINARY_FOLDER || "smart-agri/scans";
 
   return new Promise((resolve, reject) => {

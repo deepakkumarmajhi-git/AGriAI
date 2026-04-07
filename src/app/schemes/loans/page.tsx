@@ -1,15 +1,24 @@
 "use client";
 
 import AppShell from "@/components/layout/AppShell";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function LoanEligibilityPage() {
-  const [state, setState] = useState(() => localStorage.getItem("smartAgriState") || "Odisha");
+  const [state, setState] = useState("Odisha");
   const [landSize, setLandSize] = useState("");
   const [hasKYC, setHasKYC] = useState(true);
   const [hasBankAccount, setHasBankAccount] = useState(true);
   const [hasLandDocs, setHasLandDocs] = useState(true);
   const [existingLoan, setExistingLoan] = useState(false);
+
+  useEffect(() => {
+    const savedState =
+      typeof window === "undefined"
+        ? "Odisha"
+        : localStorage.getItem("smartAgriState") || "Odisha";
+
+    setState(savedState);
+  }, []);
 
   const result = useMemo(() => {
     let score = 0;

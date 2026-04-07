@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## SmartAgri MVP
 
-## Getting Started
+SmartAgri is a farmer-first Next.js application that combines advisory, scan workflows, irrigation planning, soil analysis, marketplace flows, and multilingual assistant features.
 
-First, run the development server:
+## Local Development
+
+Install dependencies and start the app:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To verify the production bundle locally:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Vercel Deployment
 
-## Learn More
+1. Import the repository into Vercel as a Next.js project.
+2. Add the environment variables from `.env.example` in the Vercel project settings.
+3. Keep the build command as `npm run build`.
+4. Redeploy after every environment-variable change.
 
-To learn more about Next.js, take a look at the following resources:
+The app now includes a built-in soil recommendation fallback, so `ML_SERVER_URL` is optional on Vercel. If you provide `ML_SERVER_URL`, SmartAgri will call your external ML service first and fall back automatically if it is unavailable.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment Variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Required for database-backed features:
+- `MONGODB_URI`
 
-## Deploy on Vercel
+Required for scan uploads:
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Required for email/contact flows:
+- `ALERT_EMAIL_FROM`
+- `ALERT_EMAIL_APP_PASSWORD`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Optional integrations:
+- `ML_SERVER_URL`
+- `OPENAI_API_KEY`
+- `GEMINI_API_KEY` or `GOOGLE_GEMINI_API_KEY`
+- `SARVAM_API_KEY`
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_FROM_NUMBER`
+- `IMD_FORECAST_URL`
+- `IMD_API_KEY`
+
+## Notes
+
+- TypeScript passes for the production build.
+- Google-font fetching has been removed from the app shell so builds do not depend on external font downloads.
+- Secrets should be configured in Vercel Project Settings, not committed to the repo.

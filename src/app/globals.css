@@ -4,6 +4,10 @@
   --bg0: #04070f;
   --bg1: #060b16;
   --bg2: #081122;
+  --font-manrope:
+    "Manrope", "Aptos", "Segoe UI", "Helvetica Neue", "Nimbus Sans", Arial, sans-serif;
+  --font-space-grotesk:
+    "Space Grotesk", "Aptos Display", "Trebuchet MS", "Segoe UI", sans-serif;
   --text-0: #eef5ff;
   --text-1: #c2cfde;
   --text-2: #93a4b8;
@@ -54,7 +58,7 @@ body {
 body {
   margin: 0;
   color: var(--text-0);
-  font-family: var(--font-manrope), sans-serif;
+  font-family: var(--font-manrope);
   background:
     radial-gradient(1200px 700px at 88% 28%, rgba(51, 209, 122, 0.18), transparent 62%),
     radial-gradient(980px 620px at 84% 46%, rgba(53, 212, 192, 0.16), transparent 58%),

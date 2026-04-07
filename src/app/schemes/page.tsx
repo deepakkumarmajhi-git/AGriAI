@@ -7,17 +7,17 @@ import { useEffect, useMemo, useState } from "react";
 export default function SchemesPage() {
   const [q, setQ] = useState("");
   const [scope, setScope] = useState<"all" | "central" | "state">("all");
-  const [stateName, setStateName] = useState(() => localStorage.getItem("smartAgriState") || "Odisha");
+  const [stateName, setStateName] = useState("Odisha");
   const [category, setCategory] = useState("all");
   const [schemes, setSchemes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  async function load() {
+  async function load(nextStateName = stateName) {
     setLoading(true);
     const url =
       `/api/schemes?q=${encodeURIComponent(q)}` +
       `&scope=${encodeURIComponent(scope)}` +
-      `&state=${encodeURIComponent(stateName)}` +
+      `&state=${encodeURIComponent(nextStateName)}` +
       `&category=${encodeURIComponent(category)}`;
 
     const res = await fetch(url);
@@ -27,7 +27,13 @@ export default function SchemesPage() {
   }
 
   useEffect(() => {
-    load();
+    const savedState =
+      typeof window === "undefined"
+        ? "Odisha"
+        : localStorage.getItem("smartAgriState") || "Odisha";
+
+    setStateName(savedState);
+    load(savedState);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -60,20 +66,20 @@ export default function SchemesPage() {
               </select>
 
               <select
-  value={stateName}
-  onChange={(e) => {
-    setStateName(e.target.value);
-    localStorage.setItem("smartAgriState", e.target.value);
-  }}
-  className="rounded-xl border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-200"
->
-  <option value="Odisha">Odisha</option>
-  <option value="Bihar">Bihar</option>
-  <option value="Punjab">Punjab</option>
-  <option value="Kerala">Kerala</option>
-  <option value="Andhra Pradesh">Andhra Pradesh</option>
-  <option value="Tamil Nadu">Tamil Nadu</option>
-</select>
+                value={stateName}
+                onChange={(e) => {
+                  setStateName(e.target.value);
+                  localStorage.setItem("smartAgriState", e.target.value);
+                }}
+                className="rounded-xl border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-200"
+              >
+                <option value="Odisha">Odisha</option>
+                <option value="Bihar">Bihar</option>
+                <option value="Punjab">Punjab</option>
+                <option value="Kerala">Kerala</option>
+                <option value="Andhra Pradesh">Andhra Pradesh</option>
+                <option value="Tamil Nadu">Tamil Nadu</option>
+              </select>
 
               <select
                 value={category}
@@ -93,7 +99,9 @@ export default function SchemesPage() {
             </div>
 
             <button
-              onClick={load}
+              onClick={() => {
+                void load();
+              }}
               className="mt-4 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
             >
               {loading ? "Loading..." : "Search"}

@@ -25,7 +25,7 @@ export default function SchemeDetailPage() {
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState<EligibilityForm>({
-    state: localStorage.getItem("smartAgriState") || "Odisha",
+    state: "Odisha",
     hasAadhaar: true,
     hasBank: true,
     hasLandProof: true,
@@ -56,6 +56,15 @@ export default function SchemeDetailPage() {
       setSavedItem(cd?.item || null);
     }
   }
+
+  useEffect(() => {
+    const savedState =
+      typeof window === "undefined"
+        ? "Odisha"
+        : localStorage.getItem("smartAgriState") || "Odisha";
+
+    setForm((prev) => ({ ...prev, state: savedState }));
+  }, []);
 
   useEffect(() => {
     load();
